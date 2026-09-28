@@ -18,6 +18,11 @@
     hazards: [],
     start: null,
     finish: null,
+    portalIn: null,
+    portalOut: null,
+    springs: [],
+    boosts: [],
+    videoFx: { zoom:1, panX:0, panY:0, brightness:100, contrast:100, saturation:100 },
     history: [],
     tool: 'surface',
     drawing: false,
@@ -42,6 +47,8 @@
     replayBlob: null,
     replayMime: '',
     replayActive: false,
+    faceImageSrc: localStorage.getItem('pyw.face') || '',
+    faceImage: null,
   };
 
   const els = {
@@ -86,6 +93,19 @@
     missionProgress: $('missionProgress'),
     shareRunBtn: $('shareRunBtn'),
     videoReadyNote: $('videoReadyNote'),
+    advancedPanel: $('advancedPanel'),
+    advancedBtn: $('advancedBtn'),
+    advancedCloseBtn: $('advancedCloseBtn'),
+    videoZoom: $('videoZoom'),
+    videoPanX: $('videoPanX'),
+    videoPanY: $('videoPanY'),
+    videoBrightness: $('videoBrightness'),
+    videoContrast: $('videoContrast'),
+    videoSaturation: $('videoSaturation'),
+    zoomValue: $('zoomValue'),
+    facePhotoInput: $('facePhotoInput'),
+    bigHeadBtn: $('bigHeadBtn'),
+    bigHeadThumb: $('bigHeadThumb'),
   };
 
   const COLORS = {
@@ -101,6 +121,7 @@
     shades: { name: 'Lentes', price: 180 },
     neon: { name: 'Trail neón', price: 250 },
     helmet: { name: 'Casco stunt', price: 300 },
+    bighead: { name: 'Cabezón', price: 600 },
   };
 
   function saveEconomy() {
@@ -159,6 +180,125 @@
     saveEconomy();
     if (reason) showHomeToast(`+${amount} ◉ · ${reason}`);
   }
+
+  function defaultVideoFx() {
+    return { zoom:1, panX:0, panY:0, brightness:100, contrast:100, saturation:100 };
+  }
+
+  function syncVideoFxControls() {
+    const fx = state.videoFx || defaultVideoFx();
+    if (els.videoZoom) els.videoZoom.value = String(fx.zoom);
+    if (els.videoPanX) els.videoPanX.value = String(fx.panX);
+    if (els.videoPanY) els.videoPanY.value = String(fx.panY);
+    if (els.videoBrightness) els.videoBrightness.value = String(fx.brightness);
+    if (els.videoContrast) els.videoContrast.value = String(fx.contrast);
+    if (els.videoSaturation) els.videoSaturation.value = String(fx.saturation);
+    if (els.zoomValue) els.zoomValue.textContent = `${Number(fx.zoom).toFixed(2)}×`;
+    applyEditorVideoFx();
+  }
+
+  function applyEditorVideoFx() {
+    if (!els.editorVideo) return;
+    const fx = state.videoFx || defaultVideoFx();
+    els.editorVideo.style.transformOrigin = '50% 50%';
+    els.editorVideo.style.transform = `translate(${fx.panX}%, ${fx.panY}%) scale(${fx.zoom})`;
+    els.editorVideo.style.filter = `brightness(${fx.brightness}%) contrast(${fx.contrast}%) saturate(${fx.saturation}%)`;
+  }
+
+  function setVideoPreset(name) {
+    const presets = {
+      clean: { zoom:1,panX:0,panY:0,brightness:103,contrast:103,saturation:100 },
+      cinema:{ zoom:1.06,panX:0,panY:0,brightness:92,contrast:122,saturation:82 },
+      vivid:{ zoom:1.03,panX:0,panY:0,brightness:105,contrast:116,saturation:145 },
+      dream:{ zoom:1.08,panX:0,panY:0,brightness:112,contrast:88,saturation:125 },
+    };
+    state.videoFx = {...(presets[name] || defaultVideoFx())};
+    syncVideoFxControls();
+  }
+
+  function drawVideoWithFx(ctx, video, w, h) {
+    if (!video || video.readyState < 2) return;
+    const fx = state.videoFx || defaultVideoFx();
+    ctx.save();
+    ctx.filter = `brightness(${fx.brightness}%) contrast(${fx.contrast}%) saturate(${fx.saturation}%)`;
+    const dw=w*fx.zoom, dh=h*fx.zoom;
+    const dx=(w-dw)/2 + (fx.panX/100)*w;
+    const dy=(h-dh)/2 + (fx.panY/100)*h;
+    try { ctx.drawImage(video, dx, dy, dw, dh); } catch (_) {}
+    ctx.restore();
+  }
+
+  function ensureFaceImage() {
+    if (!state.faceImageSrc) return null;
+    if (state.faceImage && state.faceImage.src === state.faceImageSrc) return state.faceImage;
+    const img = new Image();
+    img.src = state.faceImageSrc;
+    state.faceImage = img;
+    return img;
+  }
+
+  async function processFacePhoto(file) {
+    if (!file) return;
+    const dataUrl = await new Promise((resolve,reject)=>{
+      const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file);
+    });
+    const img = await new Promise((resolve,reject)=>{
+      const im=new Image(); im.onload=()=>resolve(im); im.onerror=reject; im.src=dataUrl;
+    });
+    const size=256, canvas=document.createElement('canvas'); canvas.width=size; canvas.height=size;
+    const ctx=canvas.getContext('2d');
+    const scale=Math.max(size/img.width,size/img.height);
+    const dw=img.width*scale, dh=img.height*scale;
+    ctx.drawImage(img,(size-dw)/2,(size-dh)/2,dw,dh);
+    state.faceImageSrc=canvas.toDataURL('image/jpeg',.84);
+    localStorage.setItem('pyw.face',state.faceImageSrc);
+    state.faceImage=null; ensureFaceImage();
+    if (els.bigHeadThumb) {
+      els.bigHeadThumb.textContent='';
+      els.bigHeadThumb.style.backgroundImage=`url("${state.faceImageSrc}")`;
+      els.bigHeadThumb.style.backgroundSize='cover';
+      els.bigHeadThumb.style.backgroundPosition='center';
+      els.bigHeadThumb.style.width='54px'; els.bigHeadThumb.style.height='54px';
+      els.bigHeadThumb.style.borderRadius='50%'; els.bigHeadThumb.style.display='block';
+    }
+    if (!state.owned.includes('bighead')) {
+      if (state.coins >= SHOP.bighead.price) {
+        state.coins -= SHOP.bighead.price;
+        state.owned.push('bighead');
+      } else {
+        showHomeToast('Selfie lista. Cabezón cuesta 600 ◉ en esta demo.');
+        saveEconomy();
+        return;
+      }
+    }
+    state.equipped='bighead';
+    saveEconomy();
+    drawShopPreview();
+    showHomeToast('¡Cabezón equipado! Tu foto sólo se guardó en este dispositivo.');
+  }
+
+  function drawSpecialMarker(ctx,p,type,w,h,t=0) {
+    if (!p) return;
+    const x=p.x*w,y=p.y*h;
+    ctx.save(); ctx.translate(x,y);
+    if(type==='portalIn'||type==='portalOut'){
+      const color=type==='portalIn'?'#9a78ff':'#5ee7ff';
+      const pulse=1+Math.sin(t*6)*.08;
+      ctx.scale(pulse,pulse);ctx.strokeStyle=color;ctx.lineWidth=5;ctx.shadowColor=color;ctx.shadowBlur=18;
+      ctx.beginPath();ctx.ellipse(0,0,14,25,0,0,Math.PI*2);ctx.stroke();
+      ctx.lineWidth=2;ctx.globalAlpha=.7;ctx.beginPath();ctx.ellipse(0,0,8,18,0,0,Math.PI*2);ctx.stroke();
+    } else if(type==='spring'){
+      ctx.strokeStyle='#77f2a1';ctx.lineWidth=4;ctx.shadowColor='#77f2a1';ctx.shadowBlur=12;
+      ctx.beginPath();ctx.moveTo(-14,9);ctx.lineTo(-8,2);ctx.lineTo(-2,9);ctx.lineTo(4,2);ctx.lineTo(10,9);ctx.stroke();
+      ctx.fillStyle='#77f2a1';ctx.fillRect(-15,10,30,5);
+    } else if(type==='boost'){
+      ctx.fillStyle='#ffd166';ctx.shadowColor='#ffd166';ctx.shadowBlur=12;
+      ctx.beginPath();ctx.moveTo(-18,-8);ctx.lineTo(-2,0);ctx.lineTo(-18,8);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(16,0);ctx.lineTo(0,8);ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  }
+
 
   function todayKey() { return new Date().toISOString().slice(0,10); }
 
@@ -271,6 +411,11 @@
       hazards: state.hazards,
       start: state.start,
       finish: state.finish,
+      portalIn: state.portalIn,
+      portalOut: state.portalOut,
+      springs: state.springs,
+      boosts: state.boosts,
+      videoFx: state.videoFx,
       speed: state.speed,
     }));
   }
@@ -318,6 +463,11 @@
     ];
     state.start = {x:.07,y:.755};
     state.finish = {x:.89,y:.53};
+    state.portalIn = {x:.61,y:.64};
+    state.portalOut = {x:.75,y:.56};
+    state.springs = [{x:.305,y:.705}];
+    state.boosts = [{x:.47,y:.65}];
+    state.videoFx = defaultVideoFx();
     playDemo();
   }
 
@@ -567,6 +717,11 @@
     state.hazards = [];
     state.start = null;
     state.finish = null;
+    state.portalIn = null;
+    state.portalOut = null;
+    state.springs = [];
+    state.boosts = [];
+    state.videoFx = defaultVideoFx();
     state.history = [];
     state.attempts = 0;
     state.demoMode = false;
@@ -665,6 +820,7 @@
     els.timelineCurrent.textContent = '0.0s';
     els.timelineDuration.textContent = `${duration.toFixed(1)}s`;
     fitCanvas(els.editorCanvas, els.editorStage);
+    syncVideoFxControls();
     setTool(state.tool || 'surface');
     drawEditor();
   }
@@ -708,8 +864,9 @@
 
   function setTool(tool) {
     state.tool = tool;
-    document.querySelectorAll('.tool[data-tool]').forEach((button) => {
+    document.querySelectorAll('.tool[data-tool], .advanced-tool[data-tool]').forEach((button) => {
       button.classList.toggle('active', button.dataset.tool === tool);
+      button.classList.toggle('selected', button.dataset.tool === tool);
     });
     const copy = {
       surface: 'Dibuja por dónde puede correr.',
@@ -717,6 +874,10 @@
       start: 'Toca una superficie para colocar el inicio.',
       finish: 'Toca dónde termina el nivel.',
       erase: 'Toca una línea o marcador para borrarlo.',
+      portalIn: 'Coloca la entrada del portal.',
+      portalOut: 'Coloca dónde reaparece el runner.',
+      spring: 'Coloca un resorte para un súper salto.',
+      boost: 'Coloca un boost de velocidad.',
     };
     els.editorInstruction.textContent = copy[tool] || '';
   }
@@ -793,11 +954,22 @@
     if (state.start && Math.hypot(p.x - state.start.x, p.y - state.start.y) < targetDist) target = ['start'];
     if (state.finish && Math.hypot(p.x - state.finish.x, p.y - state.finish.y) < targetDist) target = ['finish'];
 
+    const markerChecks = [['portalIn',state.portalIn],['portalOut',state.portalOut]];
+    for (const [name,marker] of markerChecks) {
+      if (marker && Math.hypot(p.x-marker.x,p.y-marker.y) < targetDist) { target=[name]; targetDist=Math.hypot(p.x-marker.x,p.y-marker.y); }
+    }
+    (state.springs||[]).forEach((m,i)=>{const d=Math.hypot(p.x-m.x,p.y-m.y);if(d<targetDist){target=['spring',i];targetDist=d;}});
+    (state.boosts||[]).forEach((m,i)=>{const d=Math.hypot(p.x-m.x,p.y-m.y);if(d<targetDist){target=['boost',i];targetDist=d;}});
+
     if (!target) { state.history.pop(); return; }
     if (target[0] === 'surface') state.surfaces.splice(target[1], 1);
     if (target[0] === 'hazard') state.hazards.splice(target[1], 1);
     if (target[0] === 'start') state.start = null;
     if (target[0] === 'finish') state.finish = null;
+    if (target[0] === 'portalIn') state.portalIn = null;
+    if (target[0] === 'portalOut') state.portalOut = null;
+    if (target[0] === 'spring') state.springs.splice(target[1],1);
+    if (target[0] === 'boost') state.boosts.splice(target[1],1);
     drawEditor();
   }
 
@@ -846,11 +1018,6 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
-    ctx.save();
-    if (state.game?.failed && state.game.player.crashAge < .18) {
-      const power = (1 - state.game.player.crashAge/.18) * 7;
-      ctx.translate((Math.random()-.5)*power, (Math.random()-.5)*power);
-    }
     const now = currentEditorTime();
 
     const renderEntries = (entries, color, width, dashed) => {
@@ -871,6 +1038,10 @@
     }
     drawMarker(ctx, state.start, 'start', w, h);
     drawMarker(ctx, state.finish, 'finish', w, h);
+    drawSpecialMarker(ctx,state.portalIn,'portalIn',w,h,performance.now()/1000);
+    drawSpecialMarker(ctx,state.portalOut,'portalOut',w,h,performance.now()/1000);
+    (state.springs||[]).forEach(p=>drawSpecialMarker(ctx,p,'spring',w,h));
+    (state.boosts||[]).forEach(p=>drawSpecialMarker(ctx,p,'boost',w,h));
   }
 
   function validateLevel() {
@@ -895,6 +1066,11 @@
       hazards: state.hazards,
       start: state.start,
       finish: state.finish,
+      portalIn: state.portalIn,
+      portalOut: state.portalOut,
+      springs: state.springs,
+      boosts: state.boosts,
+      videoFx: state.videoFx,
       speed: state.speed,
     };
   }
@@ -957,6 +1133,9 @@
       combo: 1,
       lastGroundedAt: performance.now(),
       jumpBufferedUntil: 0,
+      portalCooldown: 0,
+      boostUntil: 0,
+      springCooldown: 0,
       player: {
         x: start.x,
         y: start.y - playerHeight * 0.55,
@@ -1068,7 +1247,10 @@
     const hazards = pixelPaths(state.hazards, w, h);
     const previousFootY = player.y + player.height * 0.48;
 
-    player.x += game.speed * dt;
+    game.portalCooldown = Math.max(0, game.portalCooldown - dt);
+    game.springCooldown = Math.max(0, game.springCooldown - dt);
+    const speedNow = game.speed * (performance.now() < game.boostUntil ? 1.55 : 1);
+    player.x += speedNow * dt;
     if (!player.grounded) {
       player.vy += game.gravity * dt;
       player.y += player.vy * dt;
@@ -1123,7 +1305,35 @@
       }
     }
 
-        const finish = { x: state.finish.x * w, y: state.finish.y * h };
+        const nearNorm = (p, radiusPx) => p && Math.hypot(player.x-p.x*w, player.y-p.y*h) <= radiusPx;
+
+    if (state.portalIn && state.portalOut && game.portalCooldown <= 0 && nearNorm(state.portalIn, Math.max(24,player.height*.55))) {
+      player.x = state.portalOut.x*w;
+      player.y = state.portalOut.y*h - player.height*.35;
+      player.vy = Math.min(player.vy,-h*.12);
+      player.grounded = false;
+      game.portalCooldown = .65;
+      game.particles.push(...Array.from({length:18},(_,i)=>({x:player.x,y:player.y,vx:(Math.random()-.5)*130,vy:(Math.random()-.5)*130,r:2+Math.random()*4,color:i%2?'#5ee7ff':'#9a78ff'})));
+      tone(240,.12,'sine',.035,520);
+      if(navigator.vibrate) navigator.vibrate(18);
+    }
+
+    if (game.springCooldown <= 0) {
+      for (const pad of state.springs || []) {
+        if (nearNorm(pad, Math.max(22,player.height*.45))) {
+          player.grounded=false; player.vy=game.jumpVelocity*1.42; game.springCooldown=.35;
+          tone(330,.09,'square',.03,400); if(navigator.vibrate) navigator.vibrate(14); break;
+        }
+      }
+    }
+
+    for (const boost of state.boosts || []) {
+      if (nearNorm(boost, Math.max(24,player.height*.45))) {
+        game.boostUntil=performance.now()+750;
+      }
+    }
+
+    const finish = { x: state.finish.x * w, y: state.finish.y * h };
     if (Math.hypot(player.x - finish.x, player.y - finish.y) < Math.max(30, player.height * 0.8) || player.x >= finish.x + player.width * 0.3) {
       finishRun(true);
       return;
@@ -1179,14 +1389,20 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
-    if (state.demoMode) {
-      drawDemoWorld(ctx, w, h, t);
-    } else {
-      try { ctx.drawImage(els.gameVideo, 0, 0, w, h); } catch (_) {}
+    ctx.save();
+    if (state.game?.failed && state.game.player.crashAge < .18) {
+      const power = (1 - state.game.player.crashAge/.18) * 7;
+      ctx.translate((Math.random()-.5)*power, (Math.random()-.5)*power);
     }
-    if (!state.game) return;
+    if (state.demoMode) drawDemoWorld(ctx, w, h, t);
+    else drawVideoWithFx(ctx, els.gameVideo, w, h);
+    if (!state.game) { ctx.restore(); return; }
     const p = state.game.player;
     drawGameJuice(ctx,state.game,t,w,h);
+    drawSpecialMarker(ctx,state.portalIn,'portalIn',w,h,t);
+    drawSpecialMarker(ctx,state.portalOut,'portalOut',w,h,t);
+    (state.springs||[]).forEach(m=>drawSpecialMarker(ctx,m,'spring',w,h,t));
+    (state.boosts||[]).forEach(m=>drawSpecialMarker(ctx,m,'boost',w,h,t));
     drawMarker(ctx, state.finish, 'finish', w, h);
     drawCrashFx(ctx, state.game, t);
     drawRunner(ctx, p, t, state.game.failed);
@@ -1294,10 +1510,21 @@
     // head, hair, face
     const headDX = crashed ? Math.sin(age*25+seed)*W*.12 : 0;
     const headDY = crashed ? Math.cos(age*19+seed)*H*.025 : 0;
-    ctx.fillStyle=outline;ctx.beginPath();ctx.arc(headDX,headY+headDY,headR+3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=skin;ctx.beginPath();ctx.arc(headDX,headY+headDY,headR,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#263044';ctx.beginPath();ctx.arc(-headR*.08,headY-headR*.2,headR*.88,Math.PI,Math.PI*1.92);ctx.lineTo(headR*.76,headY-headR*.1);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#152034';ctx.beginPath();ctx.arc(headR*.34,headY-headR*.03,Math.max(1.4,headR*.10),0,Math.PI*2);ctx.fill();
+    if (state.equipped === 'bighead' && state.faceImageSrc) {
+      const face=ensureFaceImage(), bigR=headR*1.62;
+      ctx.fillStyle=outline;ctx.beginPath();ctx.arc(headDX,headY+headDY,bigR+4,0,Math.PI*2);ctx.fill();
+      if(face?.complete){
+        ctx.save();ctx.beginPath();ctx.arc(headDX,headY+headDY,bigR,0,Math.PI*2);ctx.clip();
+        ctx.drawImage(face,headDX-bigR,headY+headDY-bigR,bigR*2,bigR*2);ctx.restore();
+      } else {
+        ctx.fillStyle='#efbc91';ctx.beginPath();ctx.arc(headDX,headY+headDY,bigR,0,Math.PI*2);ctx.fill();
+      }
+    } else {
+      ctx.fillStyle=outline;ctx.beginPath();ctx.arc(headDX,headY+headDY,headR+3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=skin;ctx.beginPath();ctx.arc(headDX,headY+headDY,headR,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#263044';ctx.beginPath();ctx.arc(-headR*.08,headY-headR*.2,headR*.88,Math.PI,Math.PI*1.92);ctx.lineTo(headR*.76,headY-headR*.1);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#152034';ctx.beginPath();ctx.arc(headR*.34,headY-headR*.03,Math.max(1.4,headR*.10),0,Math.PI*2);ctx.fill();
+    }
 
     if (crashed) {
       ctx.strokeStyle='#152034';ctx.lineWidth=2;ctx.beginPath();ctx.arc(headR*.34,headY+headR*.28,headR*.18,0,Math.PI);ctx.stroke();
@@ -1466,6 +1693,11 @@
     state.hazards = level.hazards || [];
     state.start = level.start || null;
     state.finish = level.finish || null;
+    state.portalIn = level.portalIn || null;
+    state.portalOut = level.portalOut || null;
+    state.springs = level.springs || [];
+    state.boosts = level.boosts || [];
+    state.videoFx = level.videoFx || defaultVideoFx();
     state.speed = level.speed || 1;
     state.history = [];
     state.attempts = 0;
@@ -1522,6 +1754,32 @@
       req.onerror = () => reject(req.error);
     });
   }
+
+  els.advancedBtn?.addEventListener('click', () => { els.advancedPanel.hidden = !els.advancedPanel.hidden; });
+  els.advancedCloseBtn?.addEventListener('click', () => { els.advancedPanel.hidden = true; });
+  document.querySelectorAll('.advanced-tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.advanced-tab').forEach(b=>b.classList.toggle('active',b===btn));
+    $('advancedMechanics').classList.toggle('active',btn.dataset.advancedTab==='mechanics');
+    $('advancedVideo').classList.toggle('active',btn.dataset.advancedTab==='video');
+  }));
+  document.querySelectorAll('.advanced-tool[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{
+    setTool(btn.dataset.tool); els.advancedPanel.hidden=true;
+  }));
+
+  const readVideoFx=()=>{
+    state.videoFx={
+      zoom:Number(els.videoZoom.value), panX:Number(els.videoPanX.value), panY:Number(els.videoPanY.value),
+      brightness:Number(els.videoBrightness.value), contrast:Number(els.videoContrast.value), saturation:Number(els.videoSaturation.value)
+    };
+    if(els.zoomValue) els.zoomValue.textContent=`${state.videoFx.zoom.toFixed(2)}×`;
+    applyEditorVideoFx();
+  };
+  [els.videoZoom,els.videoPanX,els.videoPanY,els.videoBrightness,els.videoContrast,els.videoSaturation].forEach(el=>el?.addEventListener('input',readVideoFx));
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>setVideoPreset(b.dataset.preset)));
+  $('resetVideoFx')?.addEventListener('click',()=>{state.videoFx=defaultVideoFx();syncVideoFxControls();});
+
+  els.bigHeadBtn?.addEventListener('click',()=>els.facePhotoInput?.click());
+  els.facePhotoInput?.addEventListener('change',()=>processFacePhoto(els.facePhotoInput.files?.[0]).catch(()=>showHomeToast('No pude procesar esa foto.')));
 
   $('shopBtn').addEventListener('click', () => showScreen('shopScreen'));
   $('shopBackBtn').addEventListener('click', () => { if(state.previewFrame) cancelAnimationFrame(state.previewFrame); showScreen('homeScreen'); });
@@ -1580,9 +1838,15 @@
     els.editorCanvas.setPointerCapture?.(event.pointerId);
     const p = pointFromEvent(event, els.editorCanvas);
     if (state.tool === 'erase') { eraseAt(p); return; }
-    if (state.tool === 'start' || state.tool === 'finish') {
+    if (['start','finish','portalIn','portalOut'].includes(state.tool)) {
       pushHistory();
       state[state.tool] = p;
+      drawEditor();
+      return;
+    }
+    if (state.tool === 'spring' || state.tool === 'boost') {
+      pushHistory();
+      (state.tool === 'spring' ? state.springs : state.boosts).push(p);
       drawEditor();
       return;
     }
@@ -1636,6 +1900,14 @@
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.warn));
   }
 
+  if (state.faceImageSrc && els.bigHeadThumb) {
+    els.bigHeadThumb.textContent='';
+    els.bigHeadThumb.style.backgroundImage=`url("${state.faceImageSrc}")`;
+    els.bigHeadThumb.style.backgroundSize='cover';
+    els.bigHeadThumb.style.backgroundPosition='center';
+    els.bigHeadThumb.style.width='54px';els.bigHeadThumb.style.height='54px';els.bigHeadThumb.style.borderRadius='50%';els.bigHeadThumb.style.display='block';
+    ensureFaceImage();
+  }
   refreshEconomyUI();
   refreshProgressionUI();
   updateShareVideoState();
