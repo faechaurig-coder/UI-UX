@@ -200,9 +200,12 @@ button { color: inherit; }
 .character-card{border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:20px;padding:10px;color:#fff;text-align:left;cursor:pointer;transition:.18s ease}
 .character-card.selected{border-color:rgba(94,231,255,.65);background:rgba(94,231,255,.09);box-shadow:0 0 0 1px rgba(94,231,255,.14),0 16px 35px rgba(0,0,0,.25)}
 .character-card:active{transform:scale(.98)}.character-card strong,.character-card small{display:block}.character-card strong{font-size:15px;margin-top:8px}.character-card small{font-size:9px;color:var(--muted);margin-top:3px}
-.character-thumb,.home-character-preview{background-image:url('./character_sprites.webp');background-repeat:no-repeat;background-size:300% 100%}
+.character-thumb,.home-character-preview{background-repeat:no-repeat;background-size:300% 100%}
 .character-thumb{height:150px;border-radius:15px;background-color:rgba(255,255,255,.035);filter:drop-shadow(0 12px 14px rgba(0,0,0,.3))}
 .character-thumb.runner,.home-character-preview.runner{background-position:0% 50%}.character-thumb.cat,.home-character-preview.cat{background-position:50% 50%}.character-thumb.skate,.home-character-preview.skate{background-position:100% 50%}
 .home-character-preview{position:absolute;left:10%;top:22%;width:48%;height:58%;background-size:300% 100%;filter:drop-shadow(0 15px 16px rgba(0,0,0,.34));animation:heroCharacter 1.15s ease-in-out infinite}
 @keyframes heroCharacter{0%,100%{transform:translateY(0) rotate(-2deg) scale(1)}50%{transform:translateY(-9px) rotate(2deg) scale(1.035,.97)}}
 @media(max-height:500px){.character-thumb{height:95px}.character-panel{padding:11px}.character-card strong{font-size:12px}.hud-character{padding:7px 10px}}
+
+.character-thumb{background-color:rgba(255,255,255,.045)}
+.character-thumb:empty:before{content:"";display:block;width:100%;height:100%;background:radial-gradient(circle,rgba(94,231,255,.11),transparent 65%)}
