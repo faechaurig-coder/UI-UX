@@ -27,6 +27,7 @@
     game: null,
     gameFrame: null,
     result: null,
+    demoMode: false,
   };
 
   const els = {
@@ -251,6 +252,7 @@
     state.finish = null;
     state.history = [];
     state.attempts = 0;
+    state.demoMode = false;
   }
 
   function pickRecorderMimeType() {
@@ -770,6 +772,7 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
+    if (state.demoMode) drawDemoWorld(ctx, w, h, t);
     if (!state.game) return;
     const p = state.game.player;
     drawMarker(ctx, state.finish, 'finish', w, h);
@@ -942,7 +945,8 @@
     });
   }
 
-  $('demoBtn').addEventListener('click', launchDemo);\n  $('createLevelBtn').addEventListener('click', openCapture);
+  $('demoBtn').addEventListener('click', launchDemo);
+  $('createLevelBtn').addEventListener('click', openCapture);
   $('openLevelsBtn').addEventListener('click', openSavedLevels);
   $('closeLevelsBtn').addEventListener('click', () => { els.savedLevelsPanel.hidden = true; });
   document.querySelectorAll('.back-home').forEach((b) => b.addEventListener('click', () => { stopCamera(); showScreen('homeScreen'); }));
