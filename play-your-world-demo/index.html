@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="screen-orientation" content="landscape" />
+  <title>Play Your World — MVP</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="rotateHint" class="rotate-hint" hidden>
+    <div class="rotate-card">
+      <div class="rotate-icon">↻</div>
+      <h2>Gira tu celular</h2>
+      <p>Play Your World está pensado para jugar en horizontal.</p>
+    </div>
+  </div>
+
+  <main id="app">
+    <section id="homeScreen" class="screen active home-screen">
+      <div class="home-glow glow-a"></div>
+      <div class="home-glow glow-b"></div>
+      <div class="hero-card">
+        <div class="eyebrow">MVP · Convierte tu mundo en un nivel</div>
+        <h1>PLAY YOUR<br><span>WORLD</span></h1>
+        <p class="hero-copy">Graba tu entorno. Dibuja por dónde correr. Toca para saltar.</p>
+        <div class="hero-actions">
+          <button id="createLevelBtn" class="btn btn-primary btn-xl">Crear nivel</button>
+          <button id="openLevelsBtn" class="btn btn-secondary">Mis niveles</button>
+        </div>
+        <div class="mini-demo" aria-hidden="true">
+          <div class="mini-surface"></div>
+          <div class="mini-runner"><i></i><b></b><em></em></div>
+          <div class="mini-hazard"></div>
+        </div>
+      </div>
+      <div id="savedLevelsPanel" class="saved-panel" hidden>
+        <div class="panel-head">
+          <div><span class="eyebrow">LOCAL</span><h2>Mis niveles</h2></div>
+          <button id="closeLevelsBtn" class="icon-btn" aria-label="Cerrar">×</button>
+        </div>
+        <div id="savedLevelsList" class="saved-levels-list"></div>
+      </div>
+    </section>
+
+    <section id="captureScreen" class="screen capture-screen">
+      <div class="topbar glass">
+        <button class="icon-btn back-home" aria-label="Volver">←</button>
+        <div>
+          <strong>1. Graba tu escenario</strong>
+          <span>Mantén la cámara quieta o muévela muy lentamente.</span>
+        </div>
+        <div id="captureTimer" class="timer">00:00</div>
+      </div>
+      <div class="camera-stage">
+        <video id="cameraPreview" autoplay muted playsinline></video>
+        <div id="captureGuide" class="capture-guide">
+          <div class="guide-line"></div>
+          <p>Deja una ruta visible para el personaje</p>
+        </div>
+        <div id="cameraFallback" class="camera-fallback" hidden>
+          <h3>No pude abrir la cámara</h3>
+          <p>Puedes elegir o grabar un video desde el selector del teléfono.</p>
+          <label class="btn btn-primary" for="videoFileInput">Elegir video</label>
+        </div>
+      </div>
+      <div class="capture-controls glass">
+        <label class="btn btn-secondary compact" for="videoFileInput">Galería</label>
+        <input id="videoFileInput" type="file" accept="video/*" capture="environment" hidden />
+        <button id="recordBtn" class="record-btn" aria-label="Grabar"><span></span></button>
+        <button id="useRecordingBtn" class="btn btn-primary compact" disabled>Usar video</button>
+      </div>
+    </section>
+
+    <section id="editorScreen" class="screen editor-screen">
+      <div class="topbar editor-topbar glass">
+        <button id="editorBackBtn" class="icon-btn" aria-label="Volver">←</button>
+        <div>
+          <strong>2. Diseña el recorrido</strong>
+          <span id="editorInstruction">Dibuja por dónde puede correr.</span>
+        </div>
+        <button id="editorVideoToggle" class="btn btn-secondary compact">▶ Video</button>
+      </div>
+      <div id="editorStage" class="world-stage">
+        <video id="editorVideo" muted loop playsinline></video>
+        <canvas id="editorCanvas"></canvas>
+        <div class="stage-badge">Las líneas desaparecen al jugar</div>
+      </div>
+      <div class="editor-bottom glass">
+        <div class="tool-row" id="toolRow">
+          <button class="tool active" data-tool="surface"><span>〰</span>Superficie</button>
+          <button class="tool" data-tool="hazard"><span>✕</span>Obstáculo</button>
+          <button class="tool" data-tool="start"><span>●</span>Inicio</button>
+          <button class="tool" data-tool="finish"><span>⚑</span>Meta</button>
+          <button class="tool" data-tool="erase"><span>⌫</span>Borrar</button>
+          <button id="undoBtn" class="tool"><span>↶</span>Deshacer</button>
+        </div>
+        <div class="editor-actions">
+          <label class="speed-control">Velocidad
+            <select id="speedSelect">
+              <option value="0.75">Lenta</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.25">Rápida</option>
+              <option value="1.5">Loca</option>
+            </select>
+          </label>
+          <button id="saveLevelBtn" class="btn btn-secondary compact">Guardar</button>
+          <button id="playBtn" class="btn btn-primary compact">Jugar</button>
+        </div>
+      </div>
+      <div id="editorToast" class="toast" hidden></div>
+    </section>
+
+    <section id="gameScreen" class="screen game-screen">
+      <div id="gameStage" class="world-stage game-stage">
+        <video id="gameVideo" muted loop playsinline></video>
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-hud">
+          <button id="exitGameBtn" class="icon-btn glass">×</button>
+          <div class="hud-pill glass"><span>Intento</span><strong id="attemptLabel">1</strong></div>
+          <div class="hud-pill glass"><span>Tiempo</span><strong id="gameTimeLabel">0.0</strong></div>
+        </div>
+        <div id="tapHint" class="tap-hint">TOCA PARA SALTAR</div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen result-screen">
+      <div class="result-card">
+        <div id="resultEmoji" class="result-emoji">🏁</div>
+        <div class="eyebrow" id="resultEyebrow">NIVEL COMPLETADO</div>
+        <h2 id="resultTitle">¡Lo lograste!</h2>
+        <div class="stats-grid">
+          <div><span>Tiempo</span><strong id="resultTime">0.0s</strong></div>
+          <div><span>Intentos</span><strong id="resultAttempts">1</strong></div>
+          <div><span>Velocidad</span><strong id="resultSpeed">1×</strong></div>
+        </div>
+        <div class="result-actions">
+          <button id="retryBtn" class="btn btn-primary">Reintentar</button>
+          <button id="editAgainBtn" class="btn btn-secondary">Editar</button>
+          <button id="newLevelBtn" class="btn btn-ghost">Nuevo nivel</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
