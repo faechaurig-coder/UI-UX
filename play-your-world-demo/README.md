@@ -99,3 +99,26 @@ La demo pública ahora incluye:
 3. Física ragdoll completa y animaciones por sprites/esqueleto.
 4. Google Play Billing + catálogo remoto + analytics/A-B tests.
 5. Rewarded ads opcionales después de validar retención.
+
+
+## Estado V6 — Replay Engine + viralización
+
+Implementado:
+
+- grabación automática de cada partida como replay vertical;
+- composición 720×1280 con branding, gameplay, tiempo y orbes;
+- botón final **Compartir video**;
+- Web Share API para enviar el archivo a apps compatibles;
+- descarga automática del clip como fallback cuando el navegador no permite compartir archivos;
+- preferencia por MP4/H.264 si el navegador lo soporta, WebM como respaldo;
+- el canvas de gameplay ahora incluye el frame real del video para que el replay contenga escenario + runner;
+- ragdoll 2.0: extremidades con movimiento independiente, squash de impacto, partículas, BONK/OOF y shake de cámara;
+- coyote time, jump buffer, orbes, combo, XP y misión diaria.
+
+### Próximo bloque
+
+1. tracking ligero/temporal de superficies dibujadas en distintos frames;
+2. preview del replay antes de compartir;
+3. audio dentro del archivo exportado;
+4. retos con ID/enlace para que otra persona juegue el mismo nivel;
+5. backend/analytics para retención, shares, conversiones y A/B tests.
