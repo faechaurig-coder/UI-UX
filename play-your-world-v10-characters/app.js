@@ -51,6 +51,7 @@
     faceImage: null,
     selectedCharacter: localStorage.getItem('pyw.character') || 'runner',
     characterSprite: null,
+    characterSpriteUrl: '',
     publicLevelId: null,
     selectedPublicLevelId: null,
     syntheticEditorMode: false,
@@ -345,11 +346,30 @@
     skate: { name:'Skater', sprite:2, stride:10.5, size:2.65, bob:.045, tilt:.105, stretch:.035 },
   };
 
-  function initCharacterSprite() {
-    const img=new Image();
-    img.decoding='async';
-    img.src='./character_sprites.webp';
-    state.characterSprite=img;
+  async function initCharacterSprite() {
+    const order=['00','01','02','03','04','05','06a','06b','07','08','09','10','11'];
+    try {
+      const parts=await Promise.all(order.map(name=>fetch('./sprite_chunks/'+name+'.txt?build=v10').then(r=>{
+        if(!r.ok) throw new Error('sprite chunk '+name);
+        return r.text();
+      })));
+      const b64=parts.join('');
+      const binary=atob(b64);
+      const bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+      if(state.characterSpriteUrl) URL.revokeObjectURL(state.characterSpriteUrl);
+      state.characterSpriteUrl=URL.createObjectURL(new Blob([bytes],{type:'image/webp'}));
+      const img=new Image();
+      img.decoding='async';
+      await new Promise((resolve,reject)=>{
+        img.onload=resolve; img.onerror=reject; img.src=state.characterSpriteUrl;
+      });
+      state.characterSprite=img;
+      updateCharacterUI();
+    } catch(err) {
+      console.warn('Character sprite reconstruction failed',err);
+      state.characterSprite=null;
+    }
   }
 
   function selectCharacter(id) {
@@ -370,6 +390,11 @@
     document.querySelectorAll('.character-card[data-character]').forEach(card=>{
       card.classList.toggle('selected',card.dataset.character===state.selectedCharacter);
     });
+    if(state.characterSpriteUrl){
+      document.querySelectorAll('.character-thumb, .home-character-preview').forEach(el=>{
+        el.style.backgroundImage='url("'+state.characterSpriteUrl+'")';
+      });
+    }
   }
 
   function drawSpriteCharacter(ctx,p,t,crashed) {
