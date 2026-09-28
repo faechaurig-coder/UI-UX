@@ -122,3 +122,33 @@ Implementado:
 3. audio dentro del archivo exportado;
 4. retos con ID/enlace para que otra persona juegue el mismo nivel;
 5. backend/analytics para retención, shares, conversiones y A/B tests.
+
+
+## Estado V7 — Creator Pro
+
+Nuevo módulo de opciones avanzadas:
+
+### Mecánicas jugables
+- **Portal entrada + portal salida:** teletransportación real del runner.
+- **Resorte:** impulso vertical superior al salto normal.
+- **Boost:** aceleración temporal.
+- Arquitectura preparada para cuerdas, ganchos, checkpoints, gravedad y objetos móviles.
+
+### Edición del video
+- zoom 1x–2x;
+- paneo horizontal y vertical;
+- brillo;
+- contraste;
+- saturación;
+- presets Limpio, Cine, Vivo y Dream;
+- los ajustes se guardan dentro de cada nivel y también se aplican durante gameplay/replay.
+
+### Cabezón
+- selfie elegida localmente;
+- compresión/crop local a 256×256;
+- se guarda solamente en el dispositivo del usuario en esta demo;
+- cosmético Cabezón usa la foto como cabeza grande circular del runner;
+- precio de prueba: 600 monedas (representa el futuro IAP/premium, todavía sin cobro real).
+
+### Estrategia futura de Creator Pro
+El editor básico debe seguir siendo gratuito y rápido. Los objetos avanzados y packs temáticos pueden convertirse en productos premium sin bloquear el loop principal.
