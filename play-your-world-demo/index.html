@@ -81,6 +81,7 @@
         <article class="shop-card" data-item="shades"><div class="item-art">😎</div><strong>Lentes</strong><small>180 ◉</small><button data-buy="shades">Comprar</button></article>
         <article class="shop-card" data-item="neon"><div class="item-art">⚡</div><strong>Trail neón</strong><small>250 ◉</small><button data-buy="neon">Comprar</button></article>
         <article class="shop-card" data-item="helmet"><div class="item-art">⛑️</div><strong>Casco stunt</strong><small>300 ◉</small><button data-buy="helmet">Comprar</button></article>
+        <article class="shop-card premium bighead-card" data-item="bighead"><div class="item-art"><span id="bigHeadThumb">🤪</span></div><strong>Cabezón</strong><small>Premium · tu selfie</small><input id="facePhotoInput" type="file" accept="image/*" capture="user" hidden><button id="bigHeadBtn">Probar mi cara</button></article>
         <article class="shop-card premium"><div class="item-art">✨</div><strong>Pack Viral</strong><small>Preview premium</small><button disabled>Próximamente</button></article>
       </div>
     </section>
@@ -110,6 +111,7 @@
       <div class="topbar editor-topbar glass">
         <button id="editorBackBtn" class="icon-btn">←</button>
         <div><strong>2. Diseña el recorrido</strong><span id="editorInstruction">Dibuja por dónde puede correr.</span></div>
+        <button id="advancedBtn" class="btn btn-secondary compact">⚙ Avanzado</button>
         <button id="editorVideoToggle" class="btn btn-secondary compact">▶ Video</button>
       </div>
       <div id="editorStage" class="world-stage">
@@ -138,6 +140,32 @@
           <button id="playBtn" class="btn btn-primary compact">Jugar</button>
         </div>
       </div>
+      <aside id="advancedPanel" class="advanced-panel glass" hidden>
+        <div class="advanced-head"><div><span class="eyebrow">CREATOR PRO</span><strong>Opciones avanzadas</strong></div><button id="advancedCloseBtn" class="icon-btn">×</button></div>
+        <div class="advanced-tabs">
+          <button class="advanced-tab active" data-advanced-tab="mechanics">Mecánicas</button>
+          <button class="advanced-tab" data-advanced-tab="video">Video</button>
+        </div>
+        <div id="advancedMechanics" class="advanced-content active">
+          <p>Coloca objetos especiales directamente sobre tu mundo.</p>
+          <div class="advanced-tool-grid">
+            <button class="advanced-tool" data-tool="portalIn"><span>◉</span><b>Portal entrada</b><small>Teletransporta</small></button>
+            <button class="advanced-tool" data-tool="portalOut"><span>◎</span><b>Portal salida</b><small>Destino</small></button>
+            <button class="advanced-tool" data-tool="spring"><span>↟</span><b>Resorte</b><small>Super salto</small></button>
+            <button class="advanced-tool" data-tool="boost"><span>»</span><b>Boost</b><small>Acelera</small></button>
+          </div>
+          <div class="advanced-tip">Idea futura: cuerdas, ganchos, gravedad, puertas, checkpoints y objetos móviles.</div>
+        </div>
+        <div id="advancedVideo" class="advanced-content">
+          <div class="video-control"><label>Zoom <b id="zoomValue">1.00×</b></label><input id="videoZoom" type="range" min="1" max="2" value="1" step=".05"></div>
+          <div class="video-control"><label>Horizontal</label><input id="videoPanX" type="range" min="-25" max="25" value="0"></div>
+          <div class="video-control"><label>Vertical</label><input id="videoPanY" type="range" min="-25" max="25" value="0"></div>
+          <div class="video-control"><label>Brillo</label><input id="videoBrightness" type="range" min="60" max="140" value="100"></div>
+          <div class="video-control"><label>Contraste</label><input id="videoContrast" type="range" min="60" max="160" value="100"></div>
+          <div class="video-control"><label>Color</label><input id="videoSaturation" type="range" min="0" max="180" value="100"></div>
+          <div class="preset-row"><button data-preset="clean">Limpio</button><button data-preset="cinema">Cine</button><button data-preset="vivid">Vivo</button><button data-preset="dream">Dream</button><button id="resetVideoFx">Reset</button></div>
+        </div>
+      </aside>
       <div id="editorToast" class="toast" hidden></div>
     </section>
 
