@@ -2,7 +2,7 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const screens = ['homeScreen', 'shopScreen', 'captureScreen', 'editorScreen', 'gameScreen', 'resultScreen'];
+  const screens = ['homeScreen', 'exploreScreen', 'shopScreen', 'captureScreen', 'editorScreen', 'gameScreen', 'resultScreen'];
 
   const state = {
     stream: null,
@@ -49,6 +49,11 @@
     replayActive: false,
     faceImageSrc: localStorage.getItem('pyw.face') || '',
     faceImage: null,
+    publicLevelId: null,
+    selectedPublicLevelId: null,
+    syntheticEditorMode: false,
+    remixSource: null,
+    returnAfterGame: 'homeScreen',
   };
 
   const els = {
@@ -106,6 +111,9 @@
     facePhotoInput: $('facePhotoInput'),
     bigHeadBtn: $('bigHeadBtn'),
     bigHeadThumb: $('bigHeadThumb'),
+    publicLevelsGrid: $('publicLevelsGrid'),
+    levelDetailPanel: $('levelDetailPanel'),
+    levelCodeInput: $('levelCodeInput'),
   };
 
   const COLORS = {
@@ -123,6 +131,202 @@
     helmet: { name: 'Casco stunt', price: 300 },
     bighead: { name: 'Cabezón', price: 600 },
   };
+
+  const PUBLIC_LEVELS = [
+    {
+      id:'office', code:'PYW-A7K92', title:'La oficina imposible', creator:'@franklab', plays:18421, completion:14, record:6.82, scene:'office',
+      leaderboard:[['Nico',6.82],['Lau',6.91],['Mau',7.03]],
+      config:{
+        surfaces:[
+          [{x:.055,y:.76},{x:.14,y:.75},{x:.23,y:.73},{x:.33,y:.70}],
+          [{x:.42,y:.67},{x:.49,y:.64},{x:.57,y:.63},{x:.64,y:.64}],
+          [{x:.72,y:.59},{x:.78,y:.56},{x:.84,y:.54},{x:.92,y:.53}]
+        ],
+        hazards:[
+          [{x:.255,y:.655},{x:.255,y:.72}],
+          [{x:.555,y:.57},{x:.575,y:.63}]
+        ],
+        start:{x:.07,y:.755}, finish:{x:.89,y:.53},
+        portalIn:{x:.61,y:.64}, portalOut:{x:.75,y:.56},
+        springs:[{x:.305,y:.705}], boosts:[{x:.47,y:.65}], speed:1
+      }
+    },
+    {
+      id:'portal', code:'PYW-P0RT4', title:'Portal de cocina', creator:'@mariaplay', plays:9642, completion:31, record:5.44, scene:'portal',
+      leaderboard:[['Sara',5.44],['Xavi',5.63],['Dani',5.81]],
+      config:{
+        surfaces:[
+          [{x:.05,y:.77},{x:.21,y:.76},{x:.35,y:.72}],
+          [{x:.46,y:.68},{x:.59,y:.66}],
+          [{x:.72,y:.57},{x:.91,y:.55}]
+        ],
+        hazards:[[{x:.32,y:.66},{x:.32,y:.73}],[{x:.58,y:.59},{x:.59,y:.66}]],
+        start:{x:.06,y:.765}, finish:{x:.90,y:.55},
+        portalIn:{x:.37,y:.71}, portalOut:{x:.73,y:.57},
+        springs:[], boosts:[{x:.51,y:.66}], speed:1.1
+      }
+    },
+    {
+      id:'sofa', code:'PYW-TURB0', title:'Sofá Turbo', creator:'@tinyworld', plays:5210, completion:62, record:4.91, scene:'sofa',
+      leaderboard:[['Iker',4.91],['Mia',5.07],['Leo',5.12]],
+      config:{
+        surfaces:[
+          [{x:.04,y:.76},{x:.19,y:.74},{x:.34,y:.71}],
+          [{x:.39,y:.69},{x:.56,y:.64},{x:.68,y:.62}],
+          [{x:.75,y:.58},{x:.94,y:.55}]
+        ],
+        hazards:[[{x:.69,y:.55},{x:.70,y:.62}]],
+        start:{x:.055,y:.755}, finish:{x:.92,y:.55},
+        portalIn:null, portalOut:null,
+        springs:[{x:.35,y:.705},{x:.70,y:.61}], boosts:[{x:.14,y:.75},{x:.48,y:.66}], speed:1.2
+      }
+    }
+  ];
+
+  function difficultyFor(completion) {
+    if (completion < 5) return 'IMPOSIBLE';
+    if (completion < 30) return 'EXTREMO';
+    if (completion < 70) return 'DIFÍCIL';
+    return 'CASUAL';
+  }
+
+  function getPublicLevel(idOrCode) {
+    const raw = String(idOrCode || '').trim();
+    const q = raw.toUpperCase();
+    return PUBLIC_LEVELS.find(function(l){ return l.id === raw || l.code.toUpperCase() === q; }) || null;
+  }
+
+  function personalBestKey(id) { return 'pyw.best.' + id; }
+
+  function getPersonalBest(id) {
+    const v = Number(localStorage.getItem(personalBestKey(id)));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  }
+
+  function renderPublicFeed(feed) {
+    if (!els.publicLevelsGrid) return;
+    feed = feed || 'foryou';
+    let levels = PUBLIC_LEVELS.slice();
+    if (feed === 'trending') levels.sort(function(a,b){ return b.plays-a.plays; });
+    if (feed === 'new') levels.reverse();
+    els.publicLevelsGrid.innerHTML = '';
+    levels.forEach(function(level){
+      const best = getPersonalBest(level.id);
+      const bestBadge = best ? '<span class="level-badge">Tú ' + best.toFixed(2) + 's</span>' : '';
+      const card = document.createElement('button');
+      card.className = 'public-level-card';
+      card.dataset.levelId = level.id;
+      card.innerHTML =
+        '<span class="difficulty">' + difficultyFor(level.completion) + '</span>' +
+        '<div class="level-thumb ' + level.scene + '"></div>' +
+        '<div class="level-card-body">' +
+          '<div class="level-card-row"><div><h3>' + level.title + '</h3><p>' + level.creator + ' · ' + level.code + '</p></div><strong>▶</strong></div>' +
+          '<div class="level-badges">' +
+            '<span class="level-badge">' + level.plays.toLocaleString('es-MX') + ' jugadas</span>' +
+            '<span class="level-badge hot">' + level.completion + '% completa</span>' +
+            '<span class="level-badge">WR ' + level.record.toFixed(2) + 's</span>' +
+            bestBadge +
+          '</div>' +
+        '</div>';
+      card.addEventListener('click', function(){ openLevelDetail(level.id); });
+      els.publicLevelsGrid.appendChild(card);
+    });
+  }
+
+  function openLevelDetail(id) {
+    const level = getPublicLevel(id);
+    if (!level) return;
+    state.selectedPublicLevelId = level.id;
+    $('detailDifficulty').textContent = difficultyFor(level.completion);
+    $('detailTitle').textContent = level.title;
+    $('detailCreator').textContent = level.creator;
+    $('detailCode').textContent = level.code;
+    $('detailPlays').textContent = level.plays.toLocaleString('es-MX');
+    $('detailCompletion').textContent = level.completion + '%';
+    $('detailWorldRecord').textContent = level.record.toFixed(2) + 's';
+    const best = getPersonalBest(level.id);
+    $('detailPersonalRecord').textContent = best ? best.toFixed(2) + 's' : '—';
+    $('detailLeaderboard').innerHTML = level.leaderboard.map(function(row){
+      return '<li><b>' + row[0] + '</b> · ' + row[1].toFixed(2) + 's</li>';
+    }).join('');
+    els.levelDetailPanel.hidden = false;
+  }
+
+  function applyPublicConfig(level, remix) {
+    const cfg = JSON.parse(JSON.stringify(level.config));
+    state.demoMode = true;
+    state.syntheticEditorMode = !!remix;
+    state.publicLevelId = remix ? null : level.id;
+    state.remixSource = remix ? level.id : null;
+    state.levelId = remix ? ('remix-' + level.id + '-' + Date.now()) : ('public-' + level.id);
+    state.levelName = remix ? ('Remix de ' + level.title) : level.title;
+    state.videoBlob = null;
+    state.videoUrl = null;
+    state.surfaces = cfg.surfaces || [];
+    state.hazards = cfg.hazards || [];
+    state.start = cfg.start;
+    state.finish = cfg.finish;
+    state.portalIn = cfg.portalIn || null;
+    state.portalOut = cfg.portalOut || null;
+    state.springs = cfg.springs || [];
+    state.boosts = cfg.boosts || [];
+    state.videoFx = defaultVideoFx();
+    state.speed = cfg.speed || 1;
+    state.attempts = 0;
+    state.history = [];
+    state.returnAfterGame = remix ? 'editorScreen' : 'exploreScreen';
+    els.speedSelect.value = String(state.speed);
+  }
+
+  function playPublicLevel(id) {
+    const level = getPublicLevel(id);
+    if (!level) return;
+    applyPublicConfig(level, false);
+    els.levelDetailPanel.hidden = true;
+    playDemo();
+  }
+
+  function openSyntheticEditor(level) {
+    applyPublicConfig(level, true);
+    showScreen('editorScreen');
+    els.editorVideo.pause();
+    els.editorVideo.removeAttribute('src');
+    els.editorVideo.load();
+    els.editorVideo.style.display = 'none';
+    els.editorVideoToggle.style.display = 'none';
+    const timeline = document.querySelector('.timeline');
+    if (timeline) timeline.style.display = 'none';
+    fitCanvas(els.editorCanvas, els.editorStage);
+    setTool('surface');
+    drawEditor();
+    toast('Remix de ' + level.title + ': cambia obstáculos, portales, resortes o boost.', 2400);
+  }
+
+  function recordPublicResult(success, elapsed) {
+    if (!success || !state.publicLevelId) return false;
+    const key = personalBestKey(state.publicLevelId);
+    const old = getPersonalBest(state.publicLevelId);
+    if (!old || elapsed < old) {
+      localStorage.setItem(key, String(elapsed));
+      return true;
+    }
+    return false;
+  }
+
+  async function sharePublicLevel(id) {
+    const level = getPublicLevel(id);
+    if (!level) return;
+    const url = new URL(location.href);
+    url.searchParams.set('level', level.code);
+    url.searchParams.set('v', '8');
+    const shareText = 'Hice el nivel “' + level.title + '” en Play Your World. Sólo ' + level.completion + '% lo completa 💀 Código: ' + level.code;
+    try {
+      if (navigator.share) await navigator.share({ title:level.title, text:shareText, url:url.toString() });
+      else await navigator.clipboard?.writeText(shareText + ' ' + url.toString());
+      awardCoins(10, 'Reto compartido');
+    } catch (_) {}
+  }
+
 
   function saveEconomy() {
     localStorage.setItem('pyw.coins', String(state.coins));
@@ -384,6 +588,7 @@
     updateOrientationHint();
     refreshEconomyUI();
     if (id === 'shopScreen') requestAnimationFrame(drawShopPreview);
+    if (id === 'exploreScreen') renderPublicFeed(document.querySelector('.explore-tab.active')?.dataset.feed || 'foryou');
   }
 
   function updateOrientationHint() {
@@ -725,6 +930,14 @@
     state.history = [];
     state.attempts = 0;
     state.demoMode = false;
+    state.syntheticEditorMode = false;
+    state.publicLevelId = null;
+    state.remixSource = null;
+    state.returnAfterGame = 'homeScreen';
+    els.editorVideo.style.display = '';
+    els.editorVideoToggle.style.display = '';
+    const timeline = document.querySelector('.timeline');
+    if (timeline) timeline.style.display = '';
   }
 
   function pickRecorderMimeType() {
@@ -1018,6 +1231,7 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
+    if (state.syntheticEditorMode) drawDemoWorld(ctx, w, h, performance.now()/1000);
     const now = currentEditorTime();
 
     const renderEntries = (entries, color, width, dashed) => {
@@ -1046,7 +1260,7 @@
 
   function validateLevel() {
     const missing = [];
-    if (!state.videoBlob) missing.push('video');
+    if (!state.videoBlob && !state.syntheticEditorMode && !state.demoMode) missing.push('video');
     if (!state.surfaces.length) missing.push('una superficie');
     if (!state.start) missing.push('el inicio');
     if (!state.finish) missing.push('la meta');
@@ -1062,6 +1276,8 @@
       id: state.levelId || (crypto.randomUUID ? crypto.randomUUID() : `level-${Date.now()}`),
       name: state.levelName || `Mi mundo ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}`,
       createdAt: Date.now(),
+      synthetic: state.syntheticEditorMode,
+      remixSource: state.remixSource,
       surfaces: state.surfaces,
       hazards: state.hazards,
       start: state.start,
@@ -1078,7 +1294,7 @@
   async function saveCurrentLevel() {
     if (!validateLevel()) return;
     const data = normalizeLevelForSave();
-    data.videoBlob = state.videoBlob;
+    if (state.videoBlob) data.videoBlob = state.videoBlob;
     await dbPutLevel(data);
     state.levelId = data.id;
     state.levelName = data.name;
@@ -1088,6 +1304,11 @@
   async function playLevel() {
     if (!validateLevel()) return;
     state.speed = parseFloat(els.speedSelect.value) || 1;
+    if (state.syntheticEditorMode) {
+      state.demoMode = true;
+      state.returnAfterGame = 'editorScreen';
+      return playDemo();
+    }
     state.attempts += 1;
     showScreen('gameScreen');
     els.attemptLabel.textContent = String(state.attempts);
@@ -1578,7 +1799,8 @@
     if (!game) return;
     const elapsed = Math.max(0, game.elapsed);
     const collected = game.collected || 0;
-    state.result = { success, elapsed, collected };
+    const newPersonalRecord = recordPublicResult(success, elapsed);
+    state.result = { success, elapsed, collected, newPersonalRecord };
     drawReplayFrame();
     stopReplayRecording();
     captureShareCard(success, elapsed, collected).catch(()=>{});
@@ -1587,7 +1809,7 @@
     stopGame();
     $('resultEmoji').textContent = success ? '🏁' : '💥';
     $('resultEyebrow').textContent = success ? 'NIVEL COMPLETADO' : 'CASI';
-    $('resultTitle').textContent = success ? '¡Lo lograste!' : 'Ese golpe dolió.';
+    $('resultTitle').textContent = newPersonalRecord ? '¡Nuevo récord personal!' : (success ? '¡Lo lograste!' : 'Ese golpe dolió.');
     $('resultTime').textContent = `${elapsed.toFixed(1)}s`;
     $('resultAttempts').textContent = String(state.attempts);
     $('resultSpeed').textContent = `${state.speed}×`;
@@ -1680,13 +1902,12 @@
     });
   }
 
+
   async function loadSavedLevel(id) {
     const level = await dbGetLevel(id);
     if (!level) return;
     stopCamera();
     if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
-    state.videoBlob = level.videoBlob;
-    state.videoUrl = URL.createObjectURL(level.videoBlob);
     state.levelId = level.id;
     state.levelName = level.name;
     state.surfaces = level.surfaces || [];
@@ -1699,11 +1920,39 @@
     state.boosts = level.boosts || [];
     state.videoFx = level.videoFx || defaultVideoFx();
     state.speed = level.speed || 1;
+    state.remixSource = level.remixSource || null;
+    state.syntheticEditorMode = !!level.synthetic;
+    state.demoMode = !!level.synthetic;
+    state.publicLevelId = null;
+    state.returnAfterGame = level.synthetic ? 'editorScreen' : 'homeScreen';
     state.history = [];
     state.attempts = 0;
     els.speedSelect.value = String(state.speed);
     els.savedLevelsPanel.hidden = true;
-    await openEditor();
+
+    if (level.synthetic) {
+      state.videoBlob = null;
+      state.videoUrl = null;
+      showScreen('editorScreen');
+      els.editorVideo.pause();
+      els.editorVideo.removeAttribute('src');
+      els.editorVideo.load();
+      els.editorVideo.style.display = 'none';
+      els.editorVideoToggle.style.display = 'none';
+      const timeline = document.querySelector('.timeline');
+      if (timeline) timeline.style.display = 'none';
+      fitCanvas(els.editorCanvas, els.editorStage);
+      setTool('surface');
+      drawEditor();
+    } else {
+      state.videoBlob = level.videoBlob;
+      state.videoUrl = URL.createObjectURL(level.videoBlob);
+      els.editorVideo.style.display = '';
+      els.editorVideoToggle.style.display = '';
+      const timeline = document.querySelector('.timeline');
+      if (timeline) timeline.style.display = '';
+      await openEditor();
+    }
   }
 
   function escapeHtml(str) {
@@ -1780,6 +2029,29 @@
 
   els.bigHeadBtn?.addEventListener('click',()=>els.facePhotoInput?.click());
   els.facePhotoInput?.addEventListener('change',()=>processFacePhoto(els.facePhotoInput.files?.[0]).catch(()=>showHomeToast('No pude procesar esa foto.')));
+
+
+  $('exploreBtn')?.addEventListener('click', function(){ showScreen('exploreScreen'); });
+  $('exploreBackBtn')?.addEventListener('click', function(){ els.levelDetailPanel.hidden = true; showScreen('homeScreen'); });
+  $('closeLevelDetail')?.addEventListener('click', function(){ els.levelDetailPanel.hidden = true; });
+  document.querySelectorAll('.explore-tab').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.explore-tab').forEach(function(b){ b.classList.toggle('active', b === btn); });
+      renderPublicFeed(btn.dataset.feed);
+    });
+  });
+  $('levelCodeBtn')?.addEventListener('click', function(){
+    const level = getPublicLevel(els.levelCodeInput.value);
+    if (level) openLevelDetail(level.id);
+    else { els.levelCodeInput.value=''; els.levelCodeInput.placeholder='Código no encontrado'; }
+  });
+  els.levelCodeInput?.addEventListener('keydown', function(e){ if (e.key === 'Enter') $('levelCodeBtn').click(); });
+  $('playPublicLevelBtn')?.addEventListener('click', function(){ playPublicLevel(state.selectedPublicLevelId); });
+  $('remixPublicLevelBtn')?.addEventListener('click', function(){
+    const level = getPublicLevel(state.selectedPublicLevelId);
+    if (level) { els.levelDetailPanel.hidden = true; openSyntheticEditor(level); }
+  });
+  $('sharePublicLevelBtn')?.addEventListener('click', function(){ sharePublicLevel(state.selectedPublicLevelId); });
 
   $('shopBtn').addEventListener('click', () => showScreen('shopScreen'));
   $('shopBackBtn').addEventListener('click', () => { if(state.previewFrame) cancelAnimationFrame(state.previewFrame); showScreen('homeScreen'); });
@@ -1879,10 +2151,15 @@
   els.editorCanvas.addEventListener('pointerup', endDraw);
   els.editorCanvas.addEventListener('pointercancel', endDraw);
   els.gameCanvas.addEventListener('pointerdown', (event) => { event.preventDefault(); jump(); });
-  $('exitGameBtn').addEventListener('click', () => { stopReplayRecording(); stopGame(); showScreen(state.demoMode ? 'homeScreen' : 'editorScreen'); });
+  $('exitGameBtn').addEventListener('click', () => { stopReplayRecording(); stopGame(); showScreen(state.returnAfterGame || (state.demoMode ? 'homeScreen' : 'editorScreen')); });
   $('retryBtn').addEventListener('click', () => { stopReplayRecording(); state.demoMode ? playDemo() : retry(); });
   $('shareRunBtn').addEventListener('click', shareRun);
-  $('editAgainBtn').addEventListener('click', async () => { if (state.demoMode) { showScreen('homeScreen'); return; } showScreen('editorScreen'); fitCanvas(els.editorCanvas, els.editorStage); drawEditor(); });
+  $('editAgainBtn').addEventListener('click', async () => {
+    if (state.syntheticEditorMode) { showScreen('editorScreen'); fitCanvas(els.editorCanvas, els.editorStage); drawEditor(); return; }
+    if (state.publicLevelId) { showScreen('exploreScreen'); openLevelDetail(state.publicLevelId); return; }
+    if (state.demoMode) { showScreen('homeScreen'); return; }
+    showScreen('editorScreen'); fitCanvas(els.editorCanvas, els.editorStage); drawEditor();
+  });
   $('newLevelBtn').addEventListener('click', () => { stopReplayRecording(); openCapture(); });
 
   window.addEventListener('resize', () => {
@@ -1912,4 +2189,9 @@
   refreshProgressionUI();
   updateShareVideoState();
   updateOrientationHint();
+  const deepLevel = new URLSearchParams(location.search).get('level');
+  if (deepLevel) {
+    const level = getPublicLevel(deepLevel);
+    if (level) { showScreen('exploreScreen'); openLevelDetail(level.id); }
+  }
 })();
