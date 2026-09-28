@@ -34,6 +34,7 @@
           <p class="hero-copy">Convierte tu sala, escritorio o cualquier lugar en un juego de parkour de un toque.</p>
           <div class="hero-actions">
             <button id="demoBtn" class="btn btn-primary btn-xl">▶ JUGAR DEMO</button>
+            <button id="exploreBtn" class="btn btn-network">🌎 Explorar niveles</button>
             <button id="createLevelBtn" class="btn btn-secondary">＋ Crear con mi video</button>
           </div>
           <div class="home-secondary">
@@ -63,6 +64,44 @@
         <div id="savedLevelsList" class="saved-levels-list"></div>
       </div>
       <div id="homeToast" class="home-toast" hidden></div>
+    </section>
+
+    <section id="exploreScreen" class="screen explore-screen">
+      <header class="explore-head">
+        <button id="exploreBackBtn" class="icon-btn">←</button>
+        <div><span class="eyebrow">PLAY YOUR WORLD NETWORK</span><h2>Explorar</h2></div>
+        <div class="explore-search"><input id="levelCodeInput" placeholder="Código PYW-A7K92"><button id="levelCodeBtn">Ir</button></div>
+      </header>
+      <div class="explore-tabs">
+        <button class="explore-tab active" data-feed="foryou">Para ti</button>
+        <button class="explore-tab" data-feed="trending">Tendencias</button>
+        <button class="explore-tab" data-feed="new">Nuevos</button>
+      </div>
+      <div id="publicLevelsGrid" class="public-levels-grid"></div>
+      <aside id="levelDetailPanel" class="level-detail-panel glass" hidden>
+        <button id="closeLevelDetail" class="icon-btn detail-close">×</button>
+        <div class="detail-hero">
+          <span class="eyebrow" id="detailDifficulty">EXTREMO</span>
+          <h3 id="detailTitle">La oficina imposible</h3>
+          <p id="detailCreator">@frank</p>
+          <div class="detail-code" id="detailCode">PYW-A7K92</div>
+        </div>
+        <div class="detail-stats">
+          <div><span>Jugadas</span><strong id="detailPlays">18.4K</strong></div>
+          <div><span>Completan</span><strong id="detailCompletion">14%</strong></div>
+          <div><span>Récord</span><strong id="detailWorldRecord">6.82s</strong></div>
+          <div><span>Tu récord</span><strong id="detailPersonalRecord">—</strong></div>
+        </div>
+        <div class="leaderboard-mini">
+          <span>TOP 3</span>
+          <ol id="detailLeaderboard"></ol>
+        </div>
+        <div class="detail-actions">
+          <button id="playPublicLevelBtn" class="btn btn-primary">▶ Jugar</button>
+          <button id="remixPublicLevelBtn" class="btn btn-secondary">Remix</button>
+          <button id="sharePublicLevelBtn" class="btn btn-share">Retar</button>
+        </div>
+      </aside>
     </section>
 
     <section id="shopScreen" class="screen shop-screen">
