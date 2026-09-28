@@ -152,3 +152,24 @@ Nuevo módulo de opciones avanzadas:
 
 ### Estrategia futura de Creator Pro
 El editor básico debe seguir siendo gratuito y rápido. Los objetos avanzados y packs temáticos pueden convertirse en productos premium sin bloquear el loop principal.
+
+
+## Estado V8 — Play Your World Network V1
+
+Se añadió una primera experiencia social jugable, todavía sin backend:
+
+- pantalla **Explorar**;
+- feeds Para ti / Tendencias / Nuevos;
+- 3 niveles públicos de muestra jugables;
+- códigos de nivel (ej. PYW-A7K92);
+- panel de estadísticas: jugadas, porcentaje de completado, récord mundial y récord personal;
+- top 3 de cada nivel;
+- récord personal persistente en el dispositivo;
+- deep link `?level=CODIGO` que abre directamente el nivel;
+- botón **Retar** que comparte el código/enlace;
+- **Remix local**: clona el nivel y abre el editor Creator Pro para modificar obstáculos, portales, resortes y boosts;
+- remixes guardables localmente;
+- dificultad derivada del completion rate.
+
+### Importante
+Las cifras de jugadas, completion rate, creadores y leaderboard global son datos de demostración en V8. Los récords personales sí se guardan localmente. El siguiente bloque para producción requiere backend (Supabase/Postgres), identidad, publicación de niveles, partidas firmadas/validadas, rankings reales, likes/follows/remixes y moderación.
