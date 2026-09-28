@@ -74,3 +74,28 @@ El editor guarda todas las coordenadas en valores normalizados `0..1`. Las curva
 7. Portar a Flutter/Flame o envolver con Capacitor según los resultados de la validación.
 
 > Si una función no hace más rápido o más divertido pasar de **VIDEO REAL** a **JUGAR**, no pertenece al MVP.
+
+
+## Estado V3 — 27 Sep 2026
+
+La demo pública ahora incluye:
+
+- runner humano simplificado con torso, cabeza, articulaciones, ropa y zapatos;
+- cosméticos equipables: gorra, lentes, trail neón y casco;
+- tienda prototipo con monedas locales;
+- regalo diario y recompensa por completar nivel;
+- choque más cómico con ragdoll visual simplificado, partículas y textos BONK/OOF;
+- preview visible después de grabar antes de entrar al editor;
+- botón Repetir;
+- timeline/scrubber para moverse por el video mientras se dibuja;
+- cada trazo guarda el segundo del video en el que fue creado para preparar la futura física temporal;
+- portada/home más cercana a un juego comercial;
+- cache v3 actualizado para evitar servir la versión anterior.
+
+### Próximos saltos grandes
+
+1. Tracking real de superficies/objetos entre frames.
+2. Replay exportable 9:16 con CTA/retos compartibles.
+3. Física ragdoll completa y animaciones por sprites/esqueleto.
+4. Google Play Billing + catálogo remoto + analytics/A-B tests.
+5. Rewarded ads opcionales después de validar retención.
