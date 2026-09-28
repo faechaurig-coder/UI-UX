@@ -1,4 +1,4 @@
-const CACHE = 'play-your-world-v4';
+const CACHE = 'play-your-world-v6';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', (event) => {
