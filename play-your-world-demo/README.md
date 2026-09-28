@@ -173,3 +173,20 @@ Se añadió una primera experiencia social jugable, todavía sin backend:
 
 ### Importante
 Las cifras de jugadas, completion rate, creadores y leaderboard global son datos de demostración en V8. Los récords personales sí se guardan localmente. El siguiente bloque para producción requiere backend (Supabase/Postgres), identidad, publicación de niveles, partidas firmadas/validadas, rankings reales, likes/follows/remixes y moderación.
+
+
+## Estado V10 — personajes jugables aprobados
+
+Build congelada en `play-your-world-v10-characters/`.
+
+- Runner elástico con piernas largas;
+- Gatito cuadrúpedo de patas exageradas;
+- Skater con patineta;
+- selector de personaje desde Inicio;
+- los tres usan los diseños aprobados como sprite base;
+- movimiento con cadencia propia, squash/stretch, rebote, inclinación y microacciones;
+- Runner: zancada elástica y pulso de carrera;
+- Gatito: galope/pounce, rebote y polvo de patas;
+- Skater: wheelie, inclinación y trazos de ruedas;
+- conservan tres corazones, daño progresivo, invulnerabilidad, K.O., cámara nativa/web, Network y Replay Engine;
+- el sprite está reconstruido desde fragmentos verificados (Base64 45,468 caracteres; CRC32 8fa88ac8) para evitar truncado de binarios.
