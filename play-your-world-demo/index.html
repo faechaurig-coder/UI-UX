@@ -41,6 +41,14 @@
             <span>•</span>
             <button id="dailyBtn" class="link-btn">Regalo diario <b>+100 ◉</b></button>
           </div>
+          <div class="progress-strip">
+            <div class="player-level"><span>NIVEL</span><strong id="playerLevel">1</strong></div>
+            <div class="xp-wrap"><div class="xp-meta"><span>Progreso</span><b id="xpLabel">0 / 100 XP</b></div><div class="xp-track"><i id="xpBar"></i></div></div>
+          </div>
+          <div class="mission-card">
+            <div><span class="eyebrow">MISIÓN DE HOY</span><strong id="missionTitle">Completa 3 partidas</strong><small id="missionProgress">0 / 3 · recompensa 150 ◉</small></div>
+            <div class="mission-icon">🎯</div>
+          </div>
         </div>
         <div class="hero-scene" aria-hidden="true">
           <div class="scene-platform p1"></div><div class="scene-platform p2"></div>
@@ -136,7 +144,7 @@
     <section id="gameScreen" class="screen game-screen">
       <div id="gameStage" class="world-stage game-stage">
         <video id="gameVideo" muted loop playsinline></video><canvas id="gameCanvas"></canvas>
-        <div class="game-hud"><button id="exitGameBtn" class="icon-btn glass">×</button><div class="hud-pill glass"><span>Intento</span><strong id="attemptLabel">1</strong></div><div class="hud-pill glass"><span>Tiempo</span><strong id="gameTimeLabel">0.0</strong></div><div class="hud-pill glass coin-hud"><span>Monedas</span><strong id="runCoins">+0</strong></div></div>
+        <div class="game-hud"><button id="exitGameBtn" class="icon-btn glass">×</button><div class="hud-pill glass"><span>Intento</span><strong id="attemptLabel">1</strong></div><div class="hud-pill glass"><span>Tiempo</span><strong id="gameTimeLabel">0.0</strong></div><div class="hud-pill glass coin-hud"><span>Monedas</span><strong id="runCoins">+0</strong></div><div class="hud-pill glass"><span>Combo</span><strong id="comboLabel">x1</strong></div></div>
         <div id="tapHint" class="tap-hint">TOCA PARA SALTAR</div>
       </div>
     </section>
@@ -146,7 +154,8 @@
         <div id="resultEmoji" class="result-emoji">🏁</div><div class="eyebrow" id="resultEyebrow">NIVEL COMPLETADO</div><h2 id="resultTitle">¡Lo lograste!</h2>
         <div class="stats-grid"><div><span>Tiempo</span><strong id="resultTime">0.0s</strong></div><div><span>Intentos</span><strong id="resultAttempts">1</strong></div><div><span>Velocidad</span><strong id="resultSpeed">1×</strong></div></div>
         <div id="rewardLine" class="reward-line">+25 ◉ por terminar</div>
-        <div class="result-actions"><button id="retryBtn" class="btn btn-primary">Reintentar</button><button id="editAgainBtn" class="btn btn-secondary">Editar</button><button id="newLevelBtn" class="btn btn-ghost">Nuevo nivel</button></div>
+        <div class="result-actions"><button id="retryBtn" class="btn btn-primary">Reintentar</button><button id="shareRunBtn" class="btn btn-share">Compartir reto</button><button id="editAgainBtn" class="btn btn-secondary">Editar</button><button id="newLevelBtn" class="btn btn-ghost">Nuevo nivel</button></div>
+        <small class="viral-copy">Comparte tu mundo. El mejor contenido del juego lo crean los jugadores.</small>
       </div>
     </section>
   </main>
