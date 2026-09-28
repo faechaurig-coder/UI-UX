@@ -36,6 +36,12 @@
     missionDate: localStorage.getItem('pyw.missionDate') || '',
     missionRuns: Number(localStorage.getItem('pyw.missionRuns') || 0),
     audioCtx: null,
+    replayCanvas: null,
+    replayRecorder: null,
+    replayChunks: [],
+    replayBlob: null,
+    replayMime: '',
+    replayActive: false,
   };
 
   const els = {
@@ -78,6 +84,8 @@
     xpLabel: $('xpLabel'),
     xpBar: $('xpBar'),
     missionProgress: $('missionProgress'),
+    shareRunBtn: $('shareRunBtn'),
+    videoReadyNote: $('videoReadyNote'),
   };
 
   const COLORS = {
@@ -383,6 +391,134 @@
 
   function roundRect(ctx,x,y,w,h,r,fill){
     r=Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+  }
+
+  function chooseReplayMime() {
+    const candidates = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm'
+    ];
+    return candidates.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+  }
+
+  function startReplayRecording() {
+    state.replayBlob = null;
+    state.replayChunks = [];
+    state.replayActive = false;
+    if (!els.gameCanvas?.captureStream || !window.MediaRecorder) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 720;
+    canvas.height = 1280;
+    state.replayCanvas = canvas;
+
+    const stream = canvas.captureStream(30);
+    const mime = chooseReplayMime();
+    try {
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4500000 } : undefined);
+      state.replayRecorder = recorder;
+      state.replayMime = recorder.mimeType || mime || 'video/webm';
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size) state.replayChunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        if (state.replayChunks.length) {
+          state.replayBlob = new Blob(state.replayChunks, { type: state.replayMime || 'video/webm' });
+        }
+        state.replayActive = false;
+        updateShareVideoState();
+      };
+      recorder.start(200);
+      state.replayActive = true;
+    } catch (error) {
+      console.warn('Replay recorder unavailable', error);
+      state.replayRecorder = null;
+      state.replayActive = false;
+    }
+  }
+
+  function stopReplayRecording() {
+    if (state.replayRecorder?.state === 'recording') {
+      try { state.replayRecorder.stop(); } catch (_) {}
+    } else {
+      state.replayActive = false;
+      updateShareVideoState();
+    }
+  }
+
+  function updateShareVideoState() {
+    if (!els.shareRunBtn || !els.videoReadyNote) return;
+    if (state.replayBlob) {
+      els.shareRunBtn.textContent = 'Compartir video';
+      els.shareRunBtn.classList.remove('is-preparing');
+      els.shareRunBtn.classList.add('is-ready');
+      els.videoReadyNote.textContent = 'Video listo · vertical y preparado para compartir.';
+    } else if (state.replayActive || state.replayRecorder?.state === 'recording') {
+      els.shareRunBtn.textContent = 'Preparando video…';
+      els.shareRunBtn.classList.add('is-preparing');
+      els.shareRunBtn.classList.remove('is-ready');
+      els.videoReadyNote.textContent = 'Estamos generando tu clip automáticamente.';
+    } else {
+      els.shareRunBtn.textContent = 'Compartir video';
+      els.shareRunBtn.classList.remove('is-preparing','is-ready');
+      els.videoReadyNote.textContent = 'Tu navegador usará una tarjeta o enlace si no permite video.';
+    }
+  }
+
+  function drawReplayFrame() {
+    const out = state.replayCanvas;
+    const source = els.gameCanvas;
+    if (!out || !source || !state.game) return;
+    const ctx = out.getContext('2d');
+    const w = out.width, h = out.height;
+    const game = state.game;
+    const success = state.result?.success;
+
+    const bg = ctx.createLinearGradient(0,0,0,h);
+    bg.addColorStop(0,'#132846');
+    bg.addColorStop(.5,'#081426');
+    bg.addColorStop(1,'#03070d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,w,h);
+
+    ctx.fillStyle='#5ee7ff';
+    ctx.font='900 24px system-ui';
+    ctx.fillText('PLAY YOUR WORLD',42,62);
+    ctx.fillStyle='#fff';
+    ctx.font='900 46px system-ui';
+    ctx.fillText('CONVERTÍ MI MUNDO',42,125);
+    ctx.fillText('EN UN JUEGO',42,178);
+
+    ctx.save();
+    roundedBody(ctx,32,225,656,690,30);
+    ctx.clip();
+    ctx.fillStyle='#000';
+    ctx.fillRect(32,225,656,690);
+    const sw=source.width, sh=source.height;
+    const srcRatio=sw/sh, boxRatio=656/690;
+    let sx=0,sy=0,sWidth=sw,sHeight=sh;
+    if(srcRatio>boxRatio){sWidth=sh*boxRatio;sx=(sw-sWidth)/2;}
+    else{sHeight=sw/boxRatio;sy=(sh-sHeight)/2;}
+    ctx.drawImage(source,sx,sy,sWidth,sHeight,32,225,656,690);
+    ctx.restore();
+
+    ctx.fillStyle='rgba(255,255,255,.08)';
+    roundedBody(ctx,42,952,636,150,24); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font='800 27px system-ui';
+    ctx.fillText(`Tiempo  ${(game.elapsed||0).toFixed(1)}s`,70,1002);
+    ctx.fillText(`Orbes  ${game.collected||0}/3`,70,1046);
+    ctx.fillStyle='#ffd166';
+    ctx.font='900 23px system-ui';
+    ctx.fillText(success === false ? 'BONK 💥' : '¿PUEDES SUPERARLO?',70,1083);
+
+    ctx.fillStyle='#a9b6ca';
+    ctx.font='700 18px system-ui';
+    ctx.fillText('Graba · dibuja · juega · comparte',42,1196);
+    ctx.fillStyle='#5ee7ff';
+    ctx.font='800 18px system-ui';
+    ctx.fillText('PLAY YOUR WORLD · ALPHA',42,1232);
   }
 
   async function openCapture() {
@@ -828,6 +964,8 @@
       },
     };
 
+    startReplayRecording();
+
     const loop = (now) => {
       if (!state.game) return;
       const dt = Math.min((now - state.game.lastTime) / 1000, 0.033);
@@ -1022,13 +1160,18 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
-    if (state.demoMode) drawDemoWorld(ctx, w, h, t);
+    if (state.demoMode) {
+      drawDemoWorld(ctx, w, h, t);
+    } else {
+      try { ctx.drawImage(els.gameVideo, 0, 0, w, h); } catch (_) {}
+    }
     if (!state.game) return;
     const p = state.game.player;
     drawGameJuice(ctx,state.game,t,w,h);
     drawMarker(ctx, state.finish, 'finish', w, h);
     drawCrashFx(ctx, state.game, t);
     drawRunner(ctx, p, t, state.game.failed);
+    drawReplayFrame();
   }
 
   function drawGameJuice(ctx, game, t, w, h) {
@@ -1184,6 +1327,8 @@
     const elapsed = Math.max(0, game.elapsed);
     const collected = game.collected || 0;
     state.result = { success, elapsed, collected };
+    drawReplayFrame();
+    stopReplayRecording();
     captureShareCard(success, elapsed, collected).catch(()=>{});
     if (success) { sfx('win'); addXp(20 + collected*5); recordMissionRun(); }
     else addXp(3);
@@ -1199,6 +1344,7 @@
     if (reward) awardCoins(reward);
     if (els.runCoins) els.runCoins.textContent = `+${reward}`;
     showScreen('resultScreen');
+    updateShareVideoState();
   }
 
   async function captureShareCard(success, elapsed, collected) {
@@ -1229,6 +1375,26 @@
   async function shareRun() {
     const text='Convertí mi mundo en un videojuego 🏃‍♂️💥 ¿puedes superarlo?';
     try {
+      if (state.replayBlob) {
+        const ext = state.replayMime.includes('mp4') ? 'mp4' : 'webm';
+        const file = new File([state.replayBlob], `play-your-world.${ext}`, { type: state.replayBlob.type || state.replayMime || 'video/webm' });
+        if (navigator.canShare?.({ files:[file] })) {
+          await navigator.share({ title:'Play Your World', text, files:[file] });
+          awardCoins(20,'Video compartido');
+          return;
+        }
+
+        const url = URL.createObjectURL(state.replayBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `play-your-world.${ext}`;
+        a.click();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+        showHomeToast('Video guardado. Ya puedes subirlo a tu red favorita.');
+        awardCoins(20,'Video generado');
+        return;
+      }
+
       if (state.shareBlob && navigator.canShare?.({files:[new File([state.shareBlob],'play-your-world.png',{type:'image/png'})]})) {
         await navigator.share({title:'Play Your World',text,files:[new File([state.shareBlob],'play-your-world.png',{type:'image/png'})]});
       } else if (navigator.share) {
@@ -1424,11 +1590,11 @@
   els.editorCanvas.addEventListener('pointerup', endDraw);
   els.editorCanvas.addEventListener('pointercancel', endDraw);
   els.gameCanvas.addEventListener('pointerdown', (event) => { event.preventDefault(); jump(); });
-  $('exitGameBtn').addEventListener('click', () => { stopGame(); showScreen(state.demoMode ? 'homeScreen' : 'editorScreen'); });
-  $('retryBtn').addEventListener('click', () => state.demoMode ? playDemo() : retry());
+  $('exitGameBtn').addEventListener('click', () => { stopReplayRecording(); stopGame(); showScreen(state.demoMode ? 'homeScreen' : 'editorScreen'); });
+  $('retryBtn').addEventListener('click', () => { stopReplayRecording(); state.demoMode ? playDemo() : retry(); });
   $('shareRunBtn').addEventListener('click', shareRun);
   $('editAgainBtn').addEventListener('click', async () => { if (state.demoMode) { showScreen('homeScreen'); return; } showScreen('editorScreen'); fitCanvas(els.editorCanvas, els.editorStage); drawEditor(); });
-  $('newLevelBtn').addEventListener('click', openCapture);
+  $('newLevelBtn').addEventListener('click', () => { stopReplayRecording(); openCapture(); });
 
   window.addEventListener('resize', () => {
     updateOrientationHint();
@@ -1447,5 +1613,6 @@
 
   refreshEconomyUI();
   refreshProgressionUI();
+  updateShareVideoState();
   updateOrientationHint();
 })();
