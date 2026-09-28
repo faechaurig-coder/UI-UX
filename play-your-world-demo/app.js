@@ -844,6 +844,11 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    if (state.game?.failed && state.game.player.crashAge < .18) {
+      const power = (1 - state.game.player.crashAge/.18) * 7;
+      ctx.translate((Math.random()-.5)*power, (Math.random()-.5)*power);
+    }
     const now = currentEditorTime();
 
     const renderEntries = (entries, color, width, dashed) => {
@@ -923,6 +928,7 @@
 
   function startGame() {
     stopGame(false);
+    state.result = null;
     const canvas = els.gameCanvas;
     const { w, h } = cssSize(canvas);
     const speedMultiplier = state.speed;
@@ -961,6 +967,10 @@
         crashSpin: 0,
         crashVX: 0,
         crashVY: 0,
+        crashAge: 0,
+        ragdollSeed: 0,
+        impactScaleX: 1,
+        impactScaleY: 1,
       },
     };
 
@@ -1040,6 +1050,9 @@
     const nowMs = performance.now();
 
     if (game.failed) {
+      player.crashAge += dt;
+      player.impactScaleX += (1-player.impactScaleX)*Math.min(1,dt*12);
+      player.impactScaleY += (1-player.impactScaleY)*Math.min(1,dt*12);
       player.x += player.crashVX * dt;
       player.y += player.crashVY * dt;
       player.crashVY += game.gravity * 0.8 * dt;
@@ -1145,6 +1158,10 @@
     p.crashVX = game.speed * (kind === 'hazard' ? 1.05 : 0.55);
     p.crashVY = kind === 'hazard' ? -game.gravity * 0.23 : Math.max(120, p.vy);
     p.crashSpin = kind === 'hazard' ? 10.5 : 7.5;
+    p.crashAge = 0;
+    p.ragdollSeed = Math.random()*10;
+    p.impactScaleX = kind === 'hazard' ? 1.22 : 1.12;
+    p.impactScaleY = kind === 'hazard' ? .76 : .86;
     game.crashWord = kind === 'hazard' ? (Math.random() > .5 ? 'BONK!' : 'OOF!') : (Math.random() > .5 ? 'NOOO!' : 'OOF!');
     game.particles = Array.from({length:14},(_,i)=>({
       x:p.x,y:p.y-p.height*.05,
@@ -1171,6 +1188,7 @@
     drawMarker(ctx, state.finish, 'finish', w, h);
     drawCrashFx(ctx, state.game, t);
     drawRunner(ctx, p, t, state.game.failed);
+    ctx.restore();
     drawReplayFrame();
   }
 
@@ -1232,6 +1250,7 @@
     ctx.save();
     ctx.translate(p.x, p.y - bounce);
     ctx.rotate(p.rotation);
+    ctx.scale(p.impactScaleX || 1, p.impactScaleY || 1);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -1254,10 +1273,12 @@
     roundedBody(ctx,-W*.22,neckY+2,W*.44,H*.26,Math.max(4,W*.12)); ctx.fill();
 
     // two-segment arms and legs
-    const armFront = crashed ? 1.7 + flail*.8 : (airborne ? -1.0 : run*.95);
-    const armBack  = crashed ? -1.25 - flail*.7 : (airborne ? .7 : run2*.95);
-    const legFront = crashed ? 1.35 - flail*.7 : (airborne ? .55 : run*.82);
-    const legBack  = crashed ? -1.1 + flail*.65 : (airborne ? -.65 : run2*.82);
+    const age = p.crashAge || 0;
+    const seed = p.ragdollSeed || 0;
+    const armFront = crashed ? 1.2 + Math.sin(age*19+seed)*1.15 : (airborne ? -1.0 : run*.95);
+    const armBack  = crashed ? -1.0 + Math.sin(age*23+seed*1.7)*1.2 : (airborne ? .7 : run2*.95);
+    const legFront = crashed ? .8 + Math.sin(age*17+seed*2.1)*1.35 : (airborne ? .55 : run*.82);
+    const legBack  = crashed ? -.75 + Math.sin(age*21+seed*.7)*1.3 : (airborne ? -.65 : run2*.82);
 
     drawJointLimb(ctx, -W*.18, neckY+H*.045, H*.19, H*.18, armFront, armFront*.55, skin, outline, Math.max(4,W*.14), false);
     drawJointLimb(ctx,  W*.18, neckY+H*.045, H*.19, H*.18, armBack, armBack*.55, skin, outline, Math.max(4,W*.14), false);
@@ -1269,8 +1290,10 @@
     ctx.strokeStyle=skin;ctx.lineWidth=Math.max(4,W*.13);ctx.beginPath();ctx.moveTo(0,neckY);ctx.lineTo(0,headY+headR*.7);ctx.stroke();
 
     // head, hair, face
-    ctx.fillStyle=outline;ctx.beginPath();ctx.arc(0,headY,headR+3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=skin;ctx.beginPath();ctx.arc(0,headY,headR,0,Math.PI*2);ctx.fill();
+    const headDX = crashed ? Math.sin(age*25+seed)*W*.12 : 0;
+    const headDY = crashed ? Math.cos(age*19+seed)*H*.025 : 0;
+    ctx.fillStyle=outline;ctx.beginPath();ctx.arc(headDX,headY+headDY,headR+3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=skin;ctx.beginPath();ctx.arc(headDX,headY+headDY,headR,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#263044';ctx.beginPath();ctx.arc(-headR*.08,headY-headR*.2,headR*.88,Math.PI,Math.PI*1.92);ctx.lineTo(headR*.76,headY-headR*.1);ctx.closePath();ctx.fill();
     ctx.fillStyle='#152034';ctx.beginPath();ctx.arc(headR*.34,headY-headR*.03,Math.max(1.4,headR*.10),0,Math.PI*2);ctx.fill();
 
