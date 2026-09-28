@@ -2,7 +2,7 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const screens = ['homeScreen', 'captureScreen', 'editorScreen', 'gameScreen', 'resultScreen'];
+  const screens = ['homeScreen', 'shopScreen', 'captureScreen', 'editorScreen', 'gameScreen', 'resultScreen'];
 
   const state = {
     stream: null,
@@ -28,6 +28,10 @@
     gameFrame: null,
     result: null,
     demoMode: false,
+    coins: Number(localStorage.getItem('pyw.coins') || 650),
+    owned: JSON.parse(localStorage.getItem('pyw.owned') || '["classic"]'),
+    equipped: localStorage.getItem('pyw.equipped') || 'classic',
+    previewFrame: null,
   };
 
   const els = {
@@ -53,6 +57,18 @@
     gameTimeLabel: $('gameTimeLabel'),
     savedLevelsPanel: $('savedLevelsPanel'),
     savedLevelsList: $('savedLevelsList'),
+    coinLabel: $('coinLabel'),
+    shopCoinLabel: $('shopCoinLabel'),
+    captureGuide: $('captureGuide'),
+    captureStatus: $('captureStatus'),
+    previewBadge: $('previewBadge'),
+    retakeBtn: $('retakeBtn'),
+    videoScrubber: $('videoScrubber'),
+    timelineCurrent: $('timelineCurrent'),
+    timelineDuration: $('timelineDuration'),
+    shopRunnerCanvas: $('shopRunnerCanvas'),
+    equippedLabel: $('equippedLabel'),
+    runCoins: $('runCoins'),
   };
 
   const COLORS = {
@@ -62,9 +78,79 @@
     finish: '#ffd166',
   };
 
+  const SHOP = {
+    classic: { name: 'Runner clásico', price: 0 },
+    cap: { name: 'Gorra roja', price: 120 },
+    shades: { name: 'Lentes', price: 180 },
+    neon: { name: 'Trail neón', price: 250 },
+    helmet: { name: 'Casco stunt', price: 300 },
+  };
+
+  function saveEconomy() {
+    localStorage.setItem('pyw.coins', String(state.coins));
+    localStorage.setItem('pyw.owned', JSON.stringify(state.owned));
+    localStorage.setItem('pyw.equipped', state.equipped);
+    refreshEconomyUI();
+  }
+
+  function refreshEconomyUI() {
+    if (els.coinLabel) els.coinLabel.textContent = String(state.coins);
+    if (els.shopCoinLabel) els.shopCoinLabel.textContent = String(state.coins);
+    if (els.equippedLabel) els.equippedLabel.textContent = SHOP[state.equipped]?.name || 'Runner clásico';
+    document.querySelectorAll('[data-item]').forEach((card) => {
+      const id = card.dataset.item;
+      if (!SHOP[id]) return;
+      const owned = state.owned.includes(id);
+      card.classList.toggle('owned', owned);
+      const btn = card.querySelector('[data-buy]');
+      if (!btn) return;
+      btn.textContent = state.equipped === id ? 'Equipado' : owned ? 'Equipar' : 'Comprar';
+    });
+  }
+
+  function showHomeToast(message) {
+    const el = $('homeToast');
+    if (!el) return;
+    el.textContent = message; el.hidden = false;
+    clearTimeout(showHomeToast._t);
+    showHomeToast._t = setTimeout(() => { el.hidden = true; }, 1800);
+  }
+
+  function buyOrEquip(id) {
+    const item = SHOP[id];
+    if (!item) return;
+    if (state.owned.includes(id)) {
+      state.equipped = id;
+      saveEconomy();
+      drawShopPreview();
+      return;
+    }
+    if (state.coins < item.price) {
+      showHomeToast('Te faltan monedas.');
+      return;
+    }
+    state.coins -= item.price;
+    state.owned.push(id);
+    state.equipped = id;
+    saveEconomy();
+    drawShopPreview();
+  }
+
+  function awardCoins(amount, reason = '') {
+    state.coins += amount;
+    saveEconomy();
+    if (reason) showHomeToast(`+${amount} ◉ · ${reason}`);
+  }
+
+  function pathPoints(entry) { return Array.isArray(entry) ? entry : (entry?.points || []); }
+  function pathTime(entry) { return Array.isArray(entry) ? 0 : Number(entry?.time || 0); }
+  function currentEditorTime() { return Number.isFinite(els.editorVideo.currentTime) ? els.editorVideo.currentTime : 0; }
+
   function showScreen(id) {
     screens.forEach((name) => $(name).classList.toggle('active', name === id));
     updateOrientationHint();
+    refreshEconomyUI();
+    if (id === 'shopScreen') requestAnimationFrame(drawShopPreview);
   }
 
   function updateOrientationHint() {
@@ -220,6 +306,12 @@
     els.cameraFallback.hidden = true;
     els.useRecordingBtn.disabled = true;
     els.captureTimer.textContent = '00:00';
+    els.retakeBtn.hidden = true;
+    els.previewBadge.hidden = true;
+    els.captureGuide.hidden = false;
+    els.captureStatus.textContent = 'Mantén la cámara estable y deja una ruta visible.';
+    els.cameraPreview.controls = false;
+    els.cameraPreview.removeAttribute('src');
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -307,17 +399,32 @@
     state.recordingTimer = null;
   }
 
-  function setVideoBlob(blob) {
+  async function setVideoBlob(blob) {
     if (!blob || !blob.size) return;
     if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
     state.videoBlob = blob;
     state.videoUrl = URL.createObjectURL(blob);
+    stopCamera();
+
     els.cameraPreview.srcObject = null;
     els.cameraPreview.src = state.videoUrl;
-    els.cameraPreview.loop = true;
     els.cameraPreview.muted = true;
-    els.cameraPreview.play().catch(() => {});
+    els.cameraPreview.loop = true;
+    els.cameraPreview.controls = true;
+    els.cameraPreview.load();
+    els.captureGuide.hidden = true;
+    els.previewBadge.hidden = false;
+    els.retakeBtn.hidden = false;
     els.useRecordingBtn.disabled = false;
+    els.captureStatus.textContent = 'Revisa lo que grabaste. Si te gusta, úsalo para crear el nivel.';
+
+    try {
+      await waitForMetadata(els.cameraPreview);
+      els.cameraPreview.currentTime = 0;
+      await els.cameraPreview.play();
+    } catch (_) {
+      // Some mobile browsers require a manual tap on the preview.
+    }
   }
 
   async function openEditor() {
@@ -328,6 +435,10 @@
     els.editorVideo.currentTime = 0;
     els.editorVideo.pause();
     await waitForMetadata(els.editorVideo);
+    const duration = Number.isFinite(els.editorVideo.duration) ? els.editorVideo.duration : 0;
+    els.videoScrubber.value = '0';
+    els.timelineCurrent.textContent = '0.0s';
+    els.timelineDuration.textContent = `${duration.toFixed(1)}s`;
     fitCanvas(els.editorCanvas, els.editorStage);
     setTool(state.tool || 'surface');
     drawEditor();
@@ -447,11 +558,11 @@
     let target = null;
     let targetDist = 0.035;
     state.surfaces.forEach((path, i) => {
-      const d = nearestDistanceToPath(p, path);
+      const d = nearestDistanceToPath(p, pathPoints(path));
       if (d < targetDist) { target = ['surface', i]; targetDist = d; }
     });
     state.hazards.forEach((path, i) => {
-      const d = nearestDistanceToPath(p, path);
+      const d = nearestDistanceToPath(p, pathPoints(path));
       if (d < targetDist) { target = ['hazard', i]; targetDist = d; }
     });
     if (state.start && Math.hypot(p.x - state.start.x, p.y - state.start.y) < targetDist) target = ['start'];
@@ -510,8 +621,21 @@
     const { w, h } = cssSize(canvas);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
-    state.surfaces.forEach((p) => drawPath(ctx, p, COLORS.surface, 5, w, h));
-    state.hazards.forEach((p) => drawPath(ctx, p, COLORS.hazard, 7, w, h, true));
+    const now = currentEditorTime();
+
+    const renderEntries = (entries, color, width, dashed) => {
+      entries.forEach((entry) => {
+        const points = pathPoints(entry);
+        const age = Math.abs(pathTime(entry) - now);
+        ctx.save();
+        ctx.globalAlpha = age <= 0.8 ? 1 : age <= 2 ? 0.35 : 0.12;
+        drawPath(ctx, points, color, width, w, h, dashed);
+        ctx.restore();
+      });
+    };
+
+    renderEntries(state.surfaces, COLORS.surface, 5, false);
+    renderEntries(state.hazards, COLORS.hazard, 7, true);
     if (state.currentPath.length > 1) {
       drawPath(ctx, state.currentPath, state.tool === 'hazard' ? COLORS.hazard : COLORS.surface, state.tool === 'hazard' ? 7 : 5, w, h, state.tool === 'hazard');
     }
@@ -591,6 +715,8 @@
       speed: w * 0.145 * speedMultiplier,
       gravity: h * 2.45,
       jumpVelocity: -h * (0.92 + (speedMultiplier - 1) * 0.1),
+      particles: [],
+      crashWord: 'OOF!',
       player: {
         x: start.x,
         y: start.y - playerHeight * 0.55,
@@ -627,7 +753,7 @@
   }
 
   function pixelPaths(paths, w, h) {
-    return paths.map((path) => path.map((p) => ({ x: p.x * w, y: p.y * h })));
+    return paths.map((entry) => pathPoints(entry).map((p) => ({ x: p.x * w, y: p.y * h }))).filter((p) => p.length > 1);
   }
 
   function segmentYAtX(a, b, x) {
@@ -683,7 +809,7 @@
       player.y += player.crashVY * dt;
       player.crashVY += game.gravity * 0.8 * dt;
       player.rotation += player.crashSpin * dt;
-      if (game.elapsed - game.failAt > 0.95) finishRun(false);
+      if (game.elapsed - game.failAt > 1.05) finishRun(false);
       return;
     }
     if (!game.running) return;
@@ -763,8 +889,14 @@
     const p = game.player;
     p.crashVX = game.speed * (kind === 'hazard' ? 1.05 : 0.55);
     p.crashVY = kind === 'hazard' ? -game.gravity * 0.23 : Math.max(120, p.vy);
-    p.crashSpin = kind === 'hazard' ? 8.5 : 5.5;
-    if (navigator.vibrate) navigator.vibrate([45, 25, 70]);
+    p.crashSpin = kind === 'hazard' ? 10.5 : 7.5;
+    game.crashWord = kind === 'hazard' ? (Math.random() > .5 ? 'BONK!' : 'OOF!') : (Math.random() > .5 ? 'NOOO!' : 'OOF!');
+    game.particles = Array.from({length:14},(_,i)=>({
+      x:p.x,y:p.y-p.height*.05,
+      vx:(Math.random()-.35)*180,vy:(Math.random()-.75)*150,
+      r:3+Math.random()*5,color:i%3===0?'#ffd166':i%2===0?'#5ee7ff':'#ff7890'
+    }));
+    if (navigator.vibrate) navigator.vibrate([55, 25, 90]);
   }
 
   function drawGame(t) {
@@ -776,67 +908,135 @@
     if (!state.game) return;
     const p = state.game.player;
     drawMarker(ctx, state.finish, 'finish', w, h);
+    drawCrashFx(ctx, state.game, t);
     drawRunner(ctx, p, t, state.game.failed);
+  }
+
+  function drawCrashFx(ctx, game, t) {
+    if (!game?.failed) return;
+    const p = game.player;
+    const age = Math.max(0, game.elapsed - game.failAt);
+    ctx.save();
+    for (const part of game.particles || []) {
+      const a = Math.max(0, 1 - age / 1.05);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = part.color;
+      ctx.beginPath();
+      ctx.arc(part.x + part.vx * age, part.y + part.vy * age + 120 * age * age, part.r * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (age < .58) {
+      ctx.translate(p.x + 24, p.y - p.height * .62);
+      ctx.rotate(-.12);
+      ctx.font = `900 ${Math.max(18,p.height*.34)}px system-ui`;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#07101f';
+      ctx.fillStyle = game.crashWord === 'BONK!' ? '#ffd166' : '#ff7890';
+      ctx.strokeText(game.crashWord || 'OOF!',0,0);
+      ctx.fillText(game.crashWord || 'OOF!',0,0);
+    }
+    ctx.restore();
   }
 
   function drawRunner(ctx, p, t, crashed) {
     const H = p.height;
     const W = p.width;
-    const run = Math.sin(t * 15);
-    const bounce = p.grounded && !crashed ? Math.abs(Math.sin(t * 15)) * 2 : 0;
+    const run = Math.sin(t * 16);
+    const run2 = Math.sin(t * 16 + Math.PI);
+    const airborne = !p.grounded && !crashed;
+    const bounce = p.grounded && !crashed ? Math.abs(Math.sin(t * 16)) * 1.7 : 0;
+    const flail = crashed ? Math.sin(t * 27) : 0;
 
     ctx.save();
     ctx.translate(p.x, p.y - bounce);
     ctx.rotate(p.rotation);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(0,0,0,.55)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 3;
 
-    const headR = W * 0.34;
-    const shoulderY = -H * 0.23;
-    const hipY = H * 0.06;
-    const limb = H * 0.34;
-    const arm = H * 0.29;
-    const white = '#f8fafc';
-    const outline = '#07101f';
+    if (state.equipped === 'neon') {
+      const g = ctx.createLinearGradient(-H*.65,0,0,0);
+      g.addColorStop(0,'rgba(94,231,255,0)');
+      g.addColorStop(1,'rgba(94,231,255,.9)');
+      ctx.strokeStyle = g; ctx.lineWidth = Math.max(5,W*.22);
+      ctx.beginPath(); ctx.moveTo(-H*.65,H*.02); ctx.lineTo(-W*.15,H*.02); ctx.stroke();
+    }
 
-    ctx.strokeStyle = outline; ctx.lineWidth = Math.max(7, W * .34);
-    ctx.beginPath(); ctx.moveTo(0, shoulderY); ctx.lineTo(0, hipY); ctx.stroke();
-    ctx.strokeStyle = white; ctx.lineWidth = Math.max(4, W * .18);
-    ctx.beginPath(); ctx.moveTo(0, shoulderY); ctx.lineTo(0, hipY); ctx.stroke();
+    const skin = '#efbc91', outline = '#142034', shirt = '#2f7fe4', shorts = '#23344d', shoe = '#f6f8fb';
+    const headY = -H*.36, headR = W*.35;
+    const neckY = -H*.20, hipY = H*.05;
 
-    const legA = crashed ? 1.2 : run * .78;
-    const legB = crashed ? -1.0 : -run * .78;
-    drawLimb(ctx, 0, hipY, limb, legA, white, outline, Math.max(4, W * .16));
-    drawLimb(ctx, 0, hipY, limb, legB, white, outline, Math.max(4, W * .16));
-
-    const armA = crashed ? -1.4 : -run * .9;
-    const armB = crashed ? 1.1 : run * .9;
-    drawLimb(ctx, 0, shoulderY + 2, arm, armA, '#dff9ff', outline, Math.max(3, W * .13));
-    drawLimb(ctx, 0, shoulderY + 2, arm, armB, '#dff9ff', outline, Math.max(3, W * .13));
-
+    // torso with actual human silhouette
     ctx.fillStyle = outline;
-    ctx.beginPath(); ctx.arc(0, -H * .39, headR + 3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fefefe';
-    ctx.beginPath(); ctx.arc(0, -H * .39, headR, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#0b1320';
-    ctx.beginPath(); ctx.arc(headR * .28, -H * .40, Math.max(1.5, headR * .13), 0, Math.PI * 2); ctx.fill();
+    roundedBody(ctx,-W*.28,neckY,W*.56,H*.30,Math.max(5,W*.16)); ctx.fill();
+    ctx.fillStyle = shirt;
+    roundedBody(ctx,-W*.22,neckY+2,W*.44,H*.26,Math.max(4,W*.12)); ctx.fill();
 
-    ctx.strokeStyle = '#5ee7ff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, -H * .39, headR + 1, -1.8, .4); ctx.stroke();
+    // two-segment arms and legs
+    const armFront = crashed ? 1.7 + flail*.8 : (airborne ? -1.0 : run*.95);
+    const armBack  = crashed ? -1.25 - flail*.7 : (airborne ? .7 : run2*.95);
+    const legFront = crashed ? 1.35 - flail*.7 : (airborne ? .55 : run*.82);
+    const legBack  = crashed ? -1.1 + flail*.65 : (airborne ? -.65 : run2*.82);
+
+    drawJointLimb(ctx, -W*.18, neckY+H*.045, H*.19, H*.18, armFront, armFront*.55, skin, outline, Math.max(4,W*.14), false);
+    drawJointLimb(ctx,  W*.18, neckY+H*.045, H*.19, H*.18, armBack, armBack*.55, skin, outline, Math.max(4,W*.14), false);
+    drawJointLimb(ctx, -W*.11, hipY, H*.23, H*.23, legFront, legFront*.46, shorts, outline, Math.max(5,W*.17), true, shoe);
+    drawJointLimb(ctx,  W*.11, hipY, H*.23, H*.23, legBack, legBack*.46, shorts, outline, Math.max(5,W*.17), true, shoe);
+
+    // neck
+    ctx.strokeStyle=outline;ctx.lineWidth=Math.max(7,W*.25);ctx.beginPath();ctx.moveTo(0,neckY);ctx.lineTo(0,headY+headR*.7);ctx.stroke();
+    ctx.strokeStyle=skin;ctx.lineWidth=Math.max(4,W*.13);ctx.beginPath();ctx.moveTo(0,neckY);ctx.lineTo(0,headY+headR*.7);ctx.stroke();
+
+    // head, hair, face
+    ctx.fillStyle=outline;ctx.beginPath();ctx.arc(0,headY,headR+3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=skin;ctx.beginPath();ctx.arc(0,headY,headR,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#263044';ctx.beginPath();ctx.arc(-headR*.08,headY-headR*.2,headR*.88,Math.PI,Math.PI*1.92);ctx.lineTo(headR*.76,headY-headR*.1);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#152034';ctx.beginPath();ctx.arc(headR*.34,headY-headR*.03,Math.max(1.4,headR*.10),0,Math.PI*2);ctx.fill();
+
+    if (crashed) {
+      ctx.strokeStyle='#152034';ctx.lineWidth=2;ctx.beginPath();ctx.arc(headR*.34,headY+headR*.28,headR*.18,0,Math.PI);ctx.stroke();
+    }
+
+    // cosmetics
+    if (state.equipped === 'cap') {
+      ctx.fillStyle='#ff526b'; ctx.beginPath(); ctx.ellipse(-2,headY-headR*.72,headR*.9,headR*.32,-.12,Math.PI,Math.PI*2); ctx.fill();
+      ctx.fillRect(headR*.35,headY-headR*.68,headR*.65,3);
+    } else if (state.equipped === 'shades') {
+      ctx.strokeStyle='#111827';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-headR*.55,headY-headR*.05);ctx.lineTo(headR*.55,headY-headR*.05);ctx.stroke();
+      ctx.fillStyle='#101826';ctx.fillRect(-headR*.55,headY-headR*.12,headR*.42,headR*.28);ctx.fillRect(headR*.12,headY-headR*.12,headR*.42,headR*.28);
+    } else if (state.equipped === 'helmet') {
+      ctx.fillStyle='#ffd166';ctx.beginPath();ctx.arc(0,headY-headR*.15,headR*.98,Math.PI,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=outline;ctx.lineWidth=2;ctx.stroke();
+    }
 
     ctx.restore();
   }
 
-  function drawLimb(ctx, x, y, len, angle, color, outline, width) {
-    const endX = x + Math.sin(angle) * len;
-    const endY = y + Math.cos(angle) * len;
-    ctx.strokeStyle = outline; ctx.lineWidth = width + 4;
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(endX, endY); ctx.stroke();
-    ctx.strokeStyle = color; ctx.lineWidth = width;
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(endX, endY); ctx.stroke();
+  function roundedBody(ctx,x,y,w,h,r) {
+    ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+  }
+
+  function drawJointLimb(ctx, x, y, upper, lower, baseAngle, bend, color, outline, width, leg=false, shoe='#fff') {
+    const kx=x+Math.sin(baseAngle)*upper, ky=y+Math.cos(baseAngle)*upper;
+    const second=baseAngle+bend;
+    const ex=kx+Math.sin(second)*lower, ey=ky+Math.cos(second)*lower;
+    ctx.strokeStyle=outline;ctx.lineWidth=width+4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(kx,ky);ctx.lineTo(ex,ey);ctx.stroke();
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(kx,ky);ctx.lineTo(ex,ey);ctx.stroke();
+    if (leg) {
+      ctx.strokeStyle=outline;ctx.lineWidth=width+5;ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex+Math.cos(second)*upper*.34,ey-Math.sin(second)*upper*.20);ctx.stroke();
+      ctx.strokeStyle=shoe;ctx.lineWidth=width+1;ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex+Math.cos(second)*upper*.34,ey-Math.sin(second)*upper*.20);ctx.stroke();
+    }
+  }
+
+  function drawShopPreview() {
+    const canvas = els.shopRunnerCanvas;
+    if (!canvas || !$('shopScreen').classList.contains('active')) return;
+    const rect=canvas.getBoundingClientRect(), ratio=Math.min(devicePixelRatio||1,2);
+    canvas.width=Math.max(1,rect.width*ratio);canvas.height=Math.max(1,rect.height*ratio);
+    const ctx=canvas.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);
+    const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(0,h*.76,w,h*.24);
+    drawRunner(ctx,{x:w*.48,y:h*.58,width:30,height:82,grounded:true,rotation:0},performance.now()/1000,false);
+    state.previewFrame=requestAnimationFrame(drawShopPreview);
   }
 
   function finishRun(success) {
@@ -851,6 +1051,10 @@
     $('resultTime').textContent = `${elapsed.toFixed(1)}s`;
     $('resultAttempts').textContent = String(state.attempts);
     $('resultSpeed').textContent = `${state.speed}×`;
+    const reward = success ? 25 : 0;
+    $('rewardLine').textContent = success ? '+25 ◉ por terminar' : 'Sin recompensa · inténtalo otra vez';
+    if (reward) awardCoins(reward);
+    if (els.runCoins) els.runCoins.textContent = `+${reward}`;
     showScreen('resultScreen');
   }
 
@@ -945,6 +1149,14 @@
     });
   }
 
+  $('shopBtn').addEventListener('click', () => showScreen('shopScreen'));
+  $('shopBackBtn').addEventListener('click', () => { if(state.previewFrame) cancelAnimationFrame(state.previewFrame); showScreen('homeScreen'); });
+  document.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => buyOrEquip(b.dataset.buy)));
+  $('dailyBtn').addEventListener('click', () => {
+    const key = new Date().toISOString().slice(0,10);
+    if (localStorage.getItem('pyw.daily') === key) { showHomeToast('Ya recogiste el regalo de hoy.'); return; }
+    localStorage.setItem('pyw.daily', key); awardCoins(100,'Regalo diario');
+  });
   $('demoBtn').addEventListener('click', launchDemo);
   $('createLevelBtn').addEventListener('click', openCapture);
   $('openLevelsBtn').addEventListener('click', openSavedLevels);
@@ -955,12 +1167,27 @@
     if (state.recorder?.state === 'recording') stopRecording(); else startRecording();
   });
   els.useRecordingBtn.addEventListener('click', openEditor);
+  els.retakeBtn.addEventListener('click', openCapture);
   els.videoFileInput.addEventListener('change', () => {
     const file = els.videoFileInput.files?.[0];
     if (file) setVideoBlob(file);
   });
 
   $('editorBackBtn').addEventListener('click', () => { showScreen('homeScreen'); });
+  els.videoScrubber.addEventListener('input', () => {
+    const d = Number.isFinite(els.editorVideo.duration) ? els.editorVideo.duration : 0;
+    els.editorVideo.pause();
+    els.editorVideoToggle.textContent = '▶ Video';
+    els.editorVideo.currentTime = d * (Number(els.videoScrubber.value) / 1000);
+    els.timelineCurrent.textContent = `${els.editorVideo.currentTime.toFixed(1)}s`;
+    drawEditor();
+  });
+  els.editorVideo.addEventListener('timeupdate', () => {
+    const d = Number.isFinite(els.editorVideo.duration) ? els.editorVideo.duration : 0;
+    if (d > 0) els.videoScrubber.value = String(Math.round((els.editorVideo.currentTime / d) * 1000));
+    els.timelineCurrent.textContent = `${els.editorVideo.currentTime.toFixed(1)}s`;
+    drawEditor();
+  });
   els.editorVideoToggle.addEventListener('click', async () => {
     if (els.editorVideo.paused) {
       try { await els.editorVideo.play(); els.editorVideoToggle.textContent = '❚❚ Video'; } catch (_) {}
@@ -1003,8 +1230,9 @@
     if (state.currentPath.length >= 2) {
       pushHistory();
       const path = simplifyPath(state.currentPath);
-      if (state.tool === 'surface') state.surfaces.push(path);
-      if (state.tool === 'hazard') state.hazards.push(path);
+      const entry = { points: path, time: currentEditorTime() };
+      if (state.tool === 'surface') state.surfaces.push(entry);
+      if (state.tool === 'hazard') state.hazards.push(entry);
     }
     state.currentPath = [];
     drawEditor();
@@ -1013,7 +1241,7 @@
   els.editorCanvas.addEventListener('pointerup', endDraw);
   els.editorCanvas.addEventListener('pointercancel', endDraw);
   els.gameCanvas.addEventListener('pointerdown', (event) => { event.preventDefault(); jump(); });
-  $('exitGameBtn').addEventListener('click', () => { stopGame(); showScreen('editorScreen'); });
+  $('exitGameBtn').addEventListener('click', () => { stopGame(); showScreen(state.demoMode ? 'homeScreen' : 'editorScreen'); });
   $('retryBtn').addEventListener('click', () => state.demoMode ? playDemo() : retry());
   $('editAgainBtn').addEventListener('click', async () => { if (state.demoMode) { showScreen('homeScreen'); return; } showScreen('editorScreen'); fitCanvas(els.editorCanvas, els.editorStage); drawEditor(); });
   $('newLevelBtn').addEventListener('click', openCapture);
@@ -1033,5 +1261,6 @@
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.warn));
   }
 
+  refreshEconomyUI();
   updateOrientationHint();
 })();
