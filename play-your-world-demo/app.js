@@ -32,6 +32,10 @@
     owned: JSON.parse(localStorage.getItem('pyw.owned') || '["classic"]'),
     equipped: localStorage.getItem('pyw.equipped') || 'classic',
     previewFrame: null,
+    xp: Number(localStorage.getItem('pyw.xp') || 0),
+    missionDate: localStorage.getItem('pyw.missionDate') || '',
+    missionRuns: Number(localStorage.getItem('pyw.missionRuns') || 0),
+    audioCtx: null,
   };
 
   const els = {
@@ -69,6 +73,11 @@
     shopRunnerCanvas: $('shopRunnerCanvas'),
     equippedLabel: $('equippedLabel'),
     runCoins: $('runCoins'),
+    comboLabel: $('comboLabel'),
+    playerLevel: $('playerLevel'),
+    xpLabel: $('xpLabel'),
+    xpBar: $('xpBar'),
+    missionProgress: $('missionProgress'),
   };
 
   const COLORS = {
@@ -97,6 +106,7 @@
     if (els.coinLabel) els.coinLabel.textContent = String(state.coins);
     if (els.shopCoinLabel) els.shopCoinLabel.textContent = String(state.coins);
     if (els.equippedLabel) els.equippedLabel.textContent = SHOP[state.equipped]?.name || 'Runner clásico';
+    refreshProgressionUI();
     document.querySelectorAll('[data-item]').forEach((card) => {
       const id = card.dataset.item;
       if (!SHOP[id]) return;
@@ -141,6 +151,81 @@
     saveEconomy();
     if (reason) showHomeToast(`+${amount} ◉ · ${reason}`);
   }
+
+  function todayKey() { return new Date().toISOString().slice(0,10); }
+
+  function ensureMissionDay() {
+    const today = todayKey();
+    if (state.missionDate !== today) {
+      state.missionDate = today;
+      state.missionRuns = 0;
+      localStorage.setItem('pyw.missionDate', today);
+      localStorage.setItem('pyw.missionRuns', '0');
+    }
+  }
+
+  function addXp(amount) {
+    state.xp += amount;
+    localStorage.setItem('pyw.xp', String(state.xp));
+    refreshProgressionUI();
+  }
+
+  function refreshProgressionUI() {
+    ensureMissionDay();
+    const level = Math.floor(state.xp / 100) + 1;
+    const within = state.xp % 100;
+    if (els.playerLevel) els.playerLevel.textContent = String(level);
+    if (els.xpLabel) els.xpLabel.textContent = `${within} / 100 XP`;
+    if (els.xpBar) els.xpBar.style.width = `${within}%`;
+    if (els.missionProgress) els.missionProgress.textContent = `${Math.min(state.missionRuns,3)} / 3 · recompensa 150 ◉`;
+  }
+
+  function recordMissionRun() {
+    ensureMissionDay();
+    if (state.missionRuns >= 3) return;
+    state.missionRuns += 1;
+    localStorage.setItem('pyw.missionRuns', String(state.missionRuns));
+    if (state.missionRuns === 3) awardCoins(150, 'Misión diaria completada');
+    refreshProgressionUI();
+  }
+
+  function getAudioCtx() {
+    if (!state.audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) state.audioCtx = new AC();
+    }
+    if (state.audioCtx?.state === 'suspended') state.audioCtx.resume().catch(()=>{});
+    return state.audioCtx;
+  }
+
+  function tone(freq=440,duration=.08,type='sine',gain=.035,slide=0) {
+    const ctx=getAudioCtx(); if(!ctx) return;
+    const osc=ctx.createOscillator(), g=ctx.createGain();
+    osc.type=type; osc.frequency.setValueAtTime(freq,ctx.currentTime);
+    if(slide) osc.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),ctx.currentTime+duration);
+    g.gain.setValueAtTime(gain,ctx.currentTime); g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);
+    osc.connect(g); g.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime+duration);
+  }
+
+  function sfx(name) {
+    if(name==='jump'){ tone(430,.08,'square',.025,190); }
+    if(name==='coin'){ tone(730,.06,'triangle',.03,220); setTimeout(()=>tone(980,.06,'triangle',.025,100),45); }
+    if(name==='land'){ tone(110,.05,'sine',.018,-30); }
+    if(name==='crash'){ tone(125,.15,'sawtooth',.045,-75); setTimeout(()=>tone(72,.18,'square',.025,-25),55); }
+    if(name==='win'){ [523,659,784].forEach((n,i)=>setTimeout(()=>tone(n,.14,'triangle',.035,80),i*90)); }
+  }
+
+  function createCollectibles(w,h) {
+    if (!state.start || !state.finish) return [];
+    const sx=state.start.x*w, sy=state.start.y*h, fx=state.finish.x*w, fy=state.finish.y*h;
+    return [.28,.52,.76].map((t,i)=>({
+      x:sx+(fx-sx)*t,
+      y:sy+(fy-sy)*t-h*(i===1?.10:.075),
+      collected:false,
+      phase:i*1.7
+    }));
+  }
+
 
   function pathPoints(entry) { return Array.isArray(entry) ? entry : (entry?.points || []); }
   function pathTime(entry) { return Array.isArray(entry) ? 0 : Number(entry?.time || 0); }
@@ -233,6 +318,8 @@
     showScreen('gameScreen');
     els.attemptLabel.textContent = String(state.attempts);
     els.gameTimeLabel.textContent = '0.0';
+    if (els.runCoins) els.runCoins.textContent = '+0';
+    if (els.comboLabel) els.comboLabel.textContent = 'x1';
     els.tapHint.style.opacity = '1';
     els.gameVideo.pause();
     els.gameVideo.removeAttribute('src');
@@ -686,6 +773,8 @@
     showScreen('gameScreen');
     els.attemptLabel.textContent = String(state.attempts);
     els.gameTimeLabel.textContent = '0.0';
+    if (els.runCoins) els.runCoins.textContent = '+0';
+    if (els.comboLabel) els.comboLabel.textContent = 'x1';
     els.tapHint.style.opacity = '1';
     els.gameVideo.src = state.videoUrl;
     els.gameVideo.loop = true;
@@ -716,7 +805,14 @@
       gravity: h * 2.45,
       jumpVelocity: -h * (0.92 + (speedMultiplier - 1) * 0.1),
       particles: [],
+      dust: [],
+      confetti: [],
       crashWord: 'OOF!',
+      collectibles: createCollectibles(w,h),
+      collected: 0,
+      combo: 1,
+      lastGroundedAt: performance.now(),
+      jumpBufferedUntil: 0,
       player: {
         x: start.x,
         y: start.y - playerHeight * 0.55,
@@ -803,6 +899,7 @@
     const canvas = els.gameCanvas;
     const { w, h } = cssSize(canvas);
     const player = game.player;
+    const nowMs = performance.now();
 
     if (game.failed) {
       player.x += player.crashVX * dt;
@@ -837,6 +934,7 @@
       if (support) {
         player.y = support.y - player.height * 0.48;
         player.vy = Math.max(0, game.speed * support.slope * 0.05);
+        game.lastGroundedAt = nowMs;
       } else {
         player.grounded = false;
         player.vy = Math.max(player.vy, 20);
@@ -849,6 +947,10 @@
         player.grounded = true;
         player.y = support.y - player.height * 0.48;
         player.vy = 0;
+        game.lastGroundedAt = nowMs;
+        game.dust.push(...Array.from({length:6},()=>({x:player.x,y:support.y,vx:(Math.random()-.5)*70,vy:-20-Math.random()*35,life:.35+Math.random()*.2})));
+        sfx('land');
+        if (game.jumpBufferedUntil > nowMs) { game.jumpBufferedUntil = 0; jump(); }
       }
     }
 
@@ -859,7 +961,16 @@
       return;
     }
 
-    const finish = { x: state.finish.x * w, y: state.finish.y * h };
+    for (const coin of game.collectibles || []) {
+      if (!coin.collected && Math.hypot(player.x-coin.x, player.y-coin.y) < Math.max(26,player.height*.7)) {
+        coin.collected=true; game.collected += 1; game.combo = Math.min(4,game.combo+1);
+        if (els.runCoins) els.runCoins.textContent = `+${game.collected*5}`;
+        if (els.comboLabel) els.comboLabel.textContent = `x${game.combo}`;
+        sfx('coin');
+      }
+    }
+
+        const finish = { x: state.finish.x * w, y: state.finish.y * h };
     if (Math.hypot(player.x - finish.x, player.y - finish.y) < Math.max(30, player.height * 0.8) || player.x >= finish.x + player.width * 0.3) {
       finishRun(true);
       return;
@@ -872,11 +983,17 @@
     const game = state.game;
     if (!game || !game.running || game.failed) return;
     const p = game.player;
-    if (p.grounded) {
+    const now = performance.now();
+    const canCoyote = now - game.lastGroundedAt <= 130;
+    if (p.grounded || canCoyote) {
       p.grounded = false;
       p.vy = game.jumpVelocity;
+      game.lastGroundedAt = -99999;
       els.tapHint.style.opacity = '0';
+      sfx('jump');
       if (navigator.vibrate) navigator.vibrate(10);
+    } else {
+      game.jumpBufferedUntil = now + 150;
     }
   }
 
@@ -896,6 +1013,7 @@
       vx:(Math.random()-.35)*180,vy:(Math.random()-.75)*150,
       r:3+Math.random()*5,color:i%3===0?'#ffd166':i%2===0?'#5ee7ff':'#ff7890'
     }));
+    sfx('crash');
     if (navigator.vibrate) navigator.vibrate([55, 25, 90]);
   }
 
@@ -907,9 +1025,30 @@
     if (state.demoMode) drawDemoWorld(ctx, w, h, t);
     if (!state.game) return;
     const p = state.game.player;
+    drawGameJuice(ctx,state.game,t,w,h);
     drawMarker(ctx, state.finish, 'finish', w, h);
     drawCrashFx(ctx, state.game, t);
     drawRunner(ctx, p, t, state.game.failed);
+  }
+
+  function drawGameJuice(ctx, game, t, w, h) {
+    ctx.save();
+    for (const coin of game.collectibles || []) {
+      if (coin.collected) continue;
+      const pulse = 1 + Math.sin(t*5+coin.phase)*.12;
+      ctx.translate(coin.x,coin.y);
+      ctx.scale(pulse,pulse);
+      ctx.shadowColor='#ffd166';ctx.shadowBlur=14;ctx.fillStyle='#ffd166';
+      ctx.beginPath();ctx.arc(0,0,8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#7a5510';ctx.font='900 9px system-ui';ctx.textAlign='center';ctx.fillText('◉',0,3);
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+    for (const d of game.dust || []) {
+      d.x += d.vx/60; d.y += d.vy/60; d.vy += 3; d.life -= 1/60;
+      if(d.life>0){ctx.globalAlpha=Math.min(1,d.life*3);ctx.fillStyle='#e8eef2';ctx.beginPath();ctx.arc(d.x,d.y,3+d.life*4,0,Math.PI*2);ctx.fill();}
+    }
+    game.dust=(game.dust||[]).filter(d=>d.life>0);
+    ctx.restore();
   }
 
   function drawCrashFx(ctx, game, t) {
@@ -1043,7 +1182,11 @@
     const game = state.game;
     if (!game) return;
     const elapsed = Math.max(0, game.elapsed);
-    state.result = { success, elapsed };
+    const collected = game.collected || 0;
+    state.result = { success, elapsed, collected };
+    captureShareCard(success, elapsed, collected).catch(()=>{});
+    if (success) { sfx('win'); addXp(20 + collected*5); recordMissionRun(); }
+    else addXp(3);
     stopGame();
     $('resultEmoji').textContent = success ? '🏁' : '💥';
     $('resultEyebrow').textContent = success ? 'NIVEL COMPLETADO' : 'CASI';
@@ -1051,11 +1194,51 @@
     $('resultTime').textContent = `${elapsed.toFixed(1)}s`;
     $('resultAttempts').textContent = String(state.attempts);
     $('resultSpeed').textContent = `${state.speed}×`;
-    const reward = success ? 25 : 0;
-    $('rewardLine').textContent = success ? '+25 ◉ por terminar' : 'Sin recompensa · inténtalo otra vez';
+    const reward = success ? 25 + collected * 5 : collected * 5;
+    $('rewardLine').textContent = reward ? `+${reward} ◉ · ${collected}/3 orbes` : 'Sin recompensa · inténtalo otra vez';
     if (reward) awardCoins(reward);
     if (els.runCoins) els.runCoins.textContent = `+${reward}`;
     showScreen('resultScreen');
+  }
+
+  async function captureShareCard(success, elapsed, collected) {
+    const source=els.gameCanvas;
+    if(!source) return;
+    const out=document.createElement('canvas'); out.width=720; out.height=1280;
+    const ctx=out.getContext('2d');
+    const g=ctx.createLinearGradient(0,0,0,1280);g.addColorStop(0,'#132846');g.addColorStop(1,'#060b14');
+    ctx.fillStyle=g;ctx.fillRect(0,0,720,1280);
+    ctx.fillStyle='#5ee7ff';ctx.font='900 26px system-ui';ctx.fillText('PLAY YOUR WORLD',48,76);
+    ctx.fillStyle='#fff';ctx.font='900 54px system-ui';ctx.fillText(success?'¿SUPERAS MI MUNDO?':'ESTE MUNDO ME DESTRUYÓ',48,150);
+    const stageY=230, stageH=620;
+    if (state.demoMode) {
+      const temp=document.createElement('canvas');temp.width=640;temp.height=360;const tc=temp.getContext('2d');
+      drawDemoWorld(tc,640,360,4);
+      ctx.drawImage(temp,40,stageY,640,stageH);
+    } else {
+      try { ctx.drawImage(els.gameVideo,40,stageY,640,stageH); } catch(_){}
+    }
+    try { ctx.drawImage(source,40,stageY,640,stageH); } catch(_){}
+    ctx.fillStyle='rgba(255,255,255,.08)';roundRect(ctx,48,900,624,185,28,'rgba(255,255,255,.08)');
+    ctx.fillStyle='#fff';ctx.font='800 28px system-ui';ctx.fillText(`Tiempo  ${elapsed.toFixed(1)}s`,82,960);ctx.fillText(`Orbes  ${collected}/3`,82,1010);
+    ctx.fillStyle='#ffd166';ctx.font='900 26px system-ui';ctx.fillText('Graba tu mundo. Conviértelo en juego.',82,1068);
+    ctx.fillStyle='#a9b6ca';ctx.font='700 20px system-ui';ctx.fillText('playyourworld · alpha',48,1208);
+    state.shareBlob=await new Promise(res=>out.toBlob(res,'image/png',.95));
+  }
+
+  async function shareRun() {
+    const text='Convertí mi mundo en un videojuego 🏃‍♂️💥 ¿puedes superarlo?';
+    try {
+      if (state.shareBlob && navigator.canShare?.({files:[new File([state.shareBlob],'play-your-world.png',{type:'image/png'})]})) {
+        await navigator.share({title:'Play Your World',text,files:[new File([state.shareBlob],'play-your-world.png',{type:'image/png'})]});
+      } else if (navigator.share) {
+        await navigator.share({title:'Play Your World',text,url:location.href});
+      } else {
+        await navigator.clipboard?.writeText(`${text} ${location.href}`);
+        showHomeToast('Reto copiado al portapapeles.');
+      }
+      awardCoins(20,'Reto compartido');
+    } catch (_) {}
   }
 
   function retry() {
@@ -1243,6 +1426,7 @@
   els.gameCanvas.addEventListener('pointerdown', (event) => { event.preventDefault(); jump(); });
   $('exitGameBtn').addEventListener('click', () => { stopGame(); showScreen(state.demoMode ? 'homeScreen' : 'editorScreen'); });
   $('retryBtn').addEventListener('click', () => state.demoMode ? playDemo() : retry());
+  $('shareRunBtn').addEventListener('click', shareRun);
   $('editAgainBtn').addEventListener('click', async () => { if (state.demoMode) { showScreen('homeScreen'); return; } showScreen('editorScreen'); fitCanvas(els.editorCanvas, els.editorStage); drawEditor(); });
   $('newLevelBtn').addEventListener('click', openCapture);
 
@@ -1262,5 +1446,6 @@
   }
 
   refreshEconomyUI();
+  refreshProgressionUI();
   updateOrientationHint();
 })();
