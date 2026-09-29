@@ -1,1 +1,56 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Echauri Asset Vault</title><link rel="stylesheet" href="styles.css"></head><body><main><header><div class="eyebrow">ECHAURI ASSET VAULT</div><h1>Recursos</h1><p>Biblioteca transversal de recursos. Los proyectos originales permanecen intactos.</p></header><section class="tools"><input id="q" placeholder="Buscar Niko, gato, arma, torre, avión, UI..."><select id="cat"><option value="">Todas las categorías</option></select><select id="repo"><option value="">Todos los proyectos</option></select></section><div id="stats"></div><section id="results"></section></main><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Echauri Asset Vault</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div>
+      <div class="eyebrow">ECHAURI ASSET VAULT</div>
+      <h1>Recursos</h1>
+      <p>Biblioteca visual transversal. Los proyectos originales permanecen intactos.</p>
+    </div>
+    <div class="hero-actions">
+      <button id="favOnly" class="ghost">★ Favoritos</button>
+      <button id="dupOnly" class="ghost">⧉ Duplicados</button>
+    </div>
+  </header>
+
+  <section class="tools">
+    <input id="q" placeholder="Buscar Niko, gato, arma, torre, avión, UI...">
+    <select id="cat"><option value="">Todas las categorías</option></select>
+    <select id="repo"><option value="">Todos los proyectos</option></select>
+    <select id="reuse">
+      <option value="">Toda reutilización</option>
+      <option value="listo">Listo para usar</option>
+      <option value="adaptar">Requiere adaptación</option>
+      <option value="referencia">Referencia / código</option>
+    </select>
+    <select id="sort">
+      <option value="name">Nombre</option>
+      <option value="reuse">Reutilización</option>
+      <option value="size">Tamaño</option>
+      <option value="duplicates">Duplicados</option>
+    </select>
+  </section>
+
+  <section class="summary">
+    <div id="stats"></div>
+    <div id="chips" class="chips"></div>
+  </section>
+
+  <section id="results" class="grid"></section>
+</main>
+
+<dialog id="detail">
+  <button class="close" id="closeDetail">×</button>
+  <div id="detailBody"></div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
