@@ -1,0 +1,98 @@
+[
+  {
+    "name": "app.js",
+    "path": "catalogo/app.js",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "corporate-os-v1",
+    "sha": "31997d6d23a1ef8adf7830b9b31b53260f7a3eae",
+    "size": 47064,
+    "extension": "js",
+    "category": "02_CRIATURAS_Y_ENEMIGOS",
+    "subcategory": "Gatos",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/corporate-os-v1/catalogo/app.js"
+  },
+  {
+    "name": "index.html",
+    "path": "catalogo/index.html",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "corporate-os-v1",
+    "sha": "42ce26347c2405026f1dfdfaba49e16e1ded1b1b",
+    "size": 47625,
+    "extension": "html",
+    "category": "02_CRIATURAS_Y_ENEMIGOS",
+    "subcategory": "Gatos",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/corporate-os-v1/catalogo/index.html"
+  },
+  {
+    "name": "models.js",
+    "path": "catalogo/models.js",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "corporate-os-v1",
+    "sha": "1fca7ef888cf2c5dcaaa0126960ec3fcd9101ac2",
+    "size": 43120,
+    "extension": "js",
+    "category": "02_CRIATURAS_Y_ENEMIGOS",
+    "subcategory": "Gatos",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/corporate-os-v1/catalogo/models.js"
+  },
+  {
+    "name": "MARKETING_BRIDGE_SPEC.md",
+    "path": "corporate-os/MARKETING_BRIDGE_SPEC.md",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "corporate-os-v1",
+    "sha": "cb209d698c3a4b2d3c127327dff1bfc5e4e2cfdf",
+    "size": 1696,
+    "extension": "md",
+    "category": "10_MARKETING_Y_STORES",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/corporate-os-v1/corporate-os/MARKETING_BRIDGE_SPEC.md"
+  },
+  {
+    "name": "logout.js",
+    "path": "corporate-os/api/logout.js",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "corporate-os-v1",
+    "sha": "696ff6d43a80056ef12c99caf69c000fff27e81d",
+    "size": 279,
+    "extension": "js",
+    "category": "06_ICONOS_LOGOS_BRANDING",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/corporate-os-v1/corporate-os/api/logout.js"
+  },
+  {
+    "name": "app.js",
+    "path": "catalogo/app.js",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "master",
+    "sha": "31997d6d23a1ef8adf7830b9b31b53260f7a3eae",
+    "size": 47064,
+    "extension": "js",
+    "category": "02_CRIATURAS_Y_ENEMIGOS",
+    "subcategory": "Gatos",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/master/catalogo/app.js"
+  },
+  {
+    "name": "index.html",
+    "path": "catalogo/index.html",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "master",
+    "sha": "42ce26347c2405026f1dfdfaba49e16e1ded1b1b",
+    "size": 47625,
+    "extension": "html",
+    "category": "02_CRIATURAS_Y_ENEMIGOS",
+    "subcategory": "Gatos",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/master/catalogo/index.html"
+  },
+  {
+    "name": "models.js",
+    "path": "catalogo/models.js",
+    "repo": "faechaurig-coder/spectclar",
+    "branch": "master",
+    "sha": "1fca7ef888cf2c5dcaaa0126960ec3fcd9101ac2",
+    "size": 43120,
+    "extension": "js",
+    "category": "02_CRIATURAS_Y_ENEMIGOS",
+    "subcategory": "Gatos",
+    "url": "https://github.com/faechaurig-coder/spectclar/blob/master/catalogo/models.js"
+  }
+]
