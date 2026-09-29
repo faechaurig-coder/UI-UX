@@ -1934,7 +1934,8 @@
     }
 
     const finish = { x: state.finish.x * w, y: state.finish.y * h };
-    if (Math.hypot(player.x - finish.x, player.y - finish.y) < Math.max(30, player.height * 0.8) || player.x >= finish.x + player.width * 0.3) {
+    const finishTimeReady = !Number.isFinite(state.finish?.time) || state.demoMode || videoTime >= state.finish.time - 0.18;
+    if (finishTimeReady && (Math.hypot(player.x - finish.x, player.y - finish.y) < Math.max(30, player.height * 0.8) || player.x >= finish.x + player.width * 0.3)) {
       finishRun(true);
       return;
     }
