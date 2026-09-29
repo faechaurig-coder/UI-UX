@@ -1,0 +1,98 @@
+[
+  {
+    "name": "estudio-icon.ico",
+    "path": "assets/estudio-icon.ico",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "313baa6d17f6b5e3680f265aa15915db5587534d",
+    "size": 798386,
+    "extension": "ico",
+    "category": "06_ICONOS_LOGOS_BRANDING",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/assets/estudio-icon.ico"
+  },
+  {
+    "name": "estudio-icon.png",
+    "path": "assets/estudio-icon.png",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "d34f941b6db42dd199de322cf7d5af0ae0887eda",
+    "size": 798364,
+    "extension": "png",
+    "category": "06_ICONOS_LOGOS_BRANDING",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/assets/estudio-icon.png"
+  },
+  {
+    "name": "app.js",
+    "path": "ui/web/app.js",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "def292d6420d13161c97857d4123e882379a8409",
+    "size": 115965,
+    "extension": "js",
+    "category": "05_UI_UX_INTERFACES",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/ui/web/app.js"
+  },
+  {
+    "name": "estudio-logo.png",
+    "path": "ui/web/assets/estudio-logo.png",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "087c21b96e49fdf9fbe00a6aec3df9eff557316d",
+    "size": 1226804,
+    "extension": "png",
+    "category": "06_ICONOS_LOGOS_BRANDING",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/ui/web/assets/estudio-logo.png"
+  },
+  {
+    "name": "estudio-logo.svg",
+    "path": "ui/web/assets/estudio-logo.svg",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "bdee5d28376762f25b4d088f5c53eebeeedc1ba8",
+    "size": 499,
+    "extension": "svg",
+    "category": "06_ICONOS_LOGOS_BRANDING",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/ui/web/assets/estudio-logo.svg"
+  },
+  {
+    "name": "favicon.png",
+    "path": "ui/web/favicon.png",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "087c21b96e49fdf9fbe00a6aec3df9eff557316d",
+    "size": 1226804,
+    "extension": "png",
+    "category": "06_ICONOS_LOGOS_BRANDING",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/ui/web/favicon.png"
+  },
+  {
+    "name": "index.html",
+    "path": "ui/web/index.html",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "9f8f476dc0bb9fcfda38654790791e1e5803df5b",
+    "size": 40238,
+    "extension": "html",
+    "category": "05_UI_UX_INTERFACES",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/ui/web/index.html"
+  },
+  {
+    "name": "styles.css",
+    "path": "ui/web/styles.css",
+    "repo": "faechaurig-coder/estudio-videos",
+    "branch": "master",
+    "sha": "1c9c33961cc1dc4576522d9107f728d6a35169e9",
+    "size": 36380,
+    "extension": "css",
+    "category": "05_UI_UX_INTERFACES",
+    "subcategory": "General",
+    "url": "https://github.com/faechaurig-coder/estudio-videos/blob/master/ui/web/styles.css"
+  }
+]
