@@ -2,9 +2,10 @@
 
 **Owner brand:** EchauriApps  
 **Started:** 2026-09-28  
-**Stage:** Product design + interactive prototype  
+**Stage:** Functional mobile MVP scaffold + backend design  
 **Temporary GitHub location:** `faechaurig-coder/UI-UX/projects/yaprobe`  
-**Branch:** `yaprobe-product-v1`
+**Branch:** `yaprobe-product-v1`  
+**Draft PR:** #1
 
 ## What this project is
 A mobile app for remembering physical products a user has tried and turning those personal ratings into a useful community product database over time.
@@ -18,34 +19,66 @@ A mobile app for remembering physical products a user has tried and turning thos
 - Price is optional but structured.
 - Product photos are canonical/shared, not duplicated per rating.
 - Supabase is the preferred MVP backend.
-- Anonymous-first authentication to remove signup friction.
+- Anonymous-first authentication removes signup friction.
+- Local-first behavior prevents backend/configuration from blocking UX testing.
 - No social feed, streaks, followers, chat or AI in MVP.
 - No sale of identifiable personal user data.
-- UI must prioritize speed, memory and confidence.
+- UI prioritizes speed, memory and decision confidence.
 
-## In progress
-- Competitive research.
-- Information architecture.
-- Visual design system.
-- Interactive static prototype.
-- Supabase schema and RLS design.
+## Completed
+- Competitive research and market framing.
+- Virtual expert committee review.
+- Information architecture and visual design system.
+- Interactive browser prototype.
+- Supabase schema + initial RLS design.
+- Expo SDK 57 / React Native 0.86 application scaffold.
+- Android package configuration: `com.echauriapps.yaprobe`.
+- Real barcode scanner screen with `expo-camera`.
+- Camera permission requested only when entering scanner.
+- Known product lookup.
+- Unknown product creation flow.
+- Rating flow: stars + buy again + optional price/note.
+- Persistent local history with AsyncStorage.
+- Personal history filters/search.
+- Product detail with “Your opinion” before “Community”.
+- Personal ranking/profile screen.
+- Optional Supabase client and anonymous-session bootstrap.
+- Supabase repository adapter for lookup, own rating, save rating and aggregate stats.
+- EAS preview/production build profiles.
+- Android build/release runbook.
+- GitHub CI workflow definition for TypeScript + Expo Doctor.
 
-## Not started
-- Production React Native / Expo app.
-- Supabase project provisioning.
-- Camera/barcode integration.
-- Image upload/compression implementation.
-- Play Console package and store listing.
-- Closed testing track.
+## Pending external connection / validation
+- Dedicated `YaProbe` GitHub repository: current GitHub connector can edit repos but does not expose repo creation.
+- Supabase project provisioning: schema is ready. A Supabase integration was suggested so it can be configured directly from ChatGPT once connected.
+- Real device smoke test of camera/barcode.
+- Product image capture, compression and upload.
+- Cloud/local synchronization conflict policy.
+- Real aggregate stats in the mobile UI.
+- Production account-linking flow.
+- App icon, Play feature graphic and screenshots.
+- Privacy policy URL.
+- Play Console closed/internal testing setup.
+
+## Current MVP behavior
+Without Supabase credentials the application remains testable:
+1. launch;
+2. scan a real barcode or tap demo scan;
+3. recognize seeded products;
+4. see previous personal opinion;
+5. edit/save rating;
+6. persist the change locally;
+7. scan an unknown barcode;
+8. create and rate the product;
+9. find it later in “Mis pruebas”.
+
+Demo barcode: `7501234567890`.
 
 ## Next technical milestone
-Convert the approved prototype into an Expo/React Native application targeting the current Google Play API requirement, connect Supabase, and implement scan → product → rate → history end-to-end.
+Connect a real Supabase project, run `supabase/schema.sql`, enable anonymous sign-ins, wire the cloud repository into the local-first store, then perform an Android physical-device smoke test.
 
 ## Definition of MVP done
 A new Android user can install, start without mandatory signup, scan or manually add a product, rate it, close the app, return later, scan the same product, and immediately see their prior rating plus safe aggregate community data.
-
-## Known external requirement
-If publishing through a new personal Play developer account subject to Google’s testing rule, production access requires a closed test with at least 12 opted-in testers continuously for 14 days.
 
 ## Handoff rule
 Any agent continuing this project must read, in order:
@@ -54,4 +87,6 @@ Any agent continuing this project must read, in order:
 3. docs/RESEARCH.md
 4. docs/EXPERT_COMMITTEE.md
 5. docs/UX_UI_SPEC.md
-6. supabase/schema.sql
+6. docs/BUILD_AND_RELEASE.md
+7. supabase/schema.sql
+8. app/README.md
