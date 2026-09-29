@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "YaProbé",
+    "slug": "yaprobe",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "yaprobe",
+    "android": {
+      "package": "com.echauriapps.yaprobe",
+      "versionCode": 1,
+      "permissions": ["CAMERA"]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "YaProbé usa la cámara únicamente cuando eliges escanear un código de barras o registrar un producto."
+        }
+      ]
+    ]
+  }
+}
