@@ -11,39 +11,63 @@
   <header class="hero">
     <div>
       <div class="eyebrow">ECHAURI ASSET VAULT</div>
-      <h1>Recursos</h1>
-      <p>Biblioteca visual transversal. Los proyectos originales permanecen intactos.</p>
+      <h1>Biblioteca de recursos</h1>
+      <p>Explora primero por familia visual o entra al buscador avanzado.</p>
     </div>
     <div class="hero-actions">
+      <button id="homeBtn" class="ghost active">⌂ Inicio</button>
+      <button id="libraryBtn" class="ghost">⌕ Biblioteca</button>
       <button id="favOnly" class="ghost">★ Favoritos</button>
-      <button id="dupOnly" class="ghost">⧉ Duplicados</button>
     </div>
   </header>
 
-  <section class="tools">
-    <input id="q" placeholder="Buscar Niko, gato, arma, torre, avión, UI...">
-    <select id="cat"><option value="">Todas las categorías</option></select>
-    <select id="repo"><option value="">Todos los proyectos</option></select>
-    <select id="reuse">
-      <option value="">Toda reutilización</option>
-      <option value="listo">Listo para usar</option>
-      <option value="adaptar">Requiere adaptación</option>
-      <option value="referencia">Referencia / código</option>
-    </select>
-    <select id="sort">
-      <option value="name">Nombre</option>
-      <option value="reuse">Reutilización</option>
-      <option value="size">Tamaño</option>
-      <option value="duplicates">Duplicados</option>
-    </select>
+  <section id="homeView">
+    <section class="overview">
+      <div class="overview-main">
+        <span class="overview-kicker">TODOS LOS PROYECTOS, UN SOLO LUGAR</span>
+        <h2>Encuentra cualquier recurso sin recordar dónde estaba.</h2>
+        <p id="overviewText">Cargando inventario...</p>
+        <button id="exploreAll" class="primary">Explorar todo</button>
+      </div>
+      <div class="overview-metrics" id="overviewMetrics"></div>
+    </section>
+
+    <section class="section-head">
+      <div><span class="eyebrow">COLECCIONES</span><h2>Explorar por categoría</h2></div>
+    </section>
+    <section id="categoryGrid" class="category-grid"></section>
+
+    <section class="section-head">
+      <div><span class="eyebrow">ACCESOS RÁPIDOS</span><h2>Recursos que usamos seguido</h2></div>
+    </section>
+    <section id="quickGrid" class="quick-grid"></section>
   </section>
 
-  <section class="summary">
-    <div id="stats"></div>
-    <div id="chips" class="chips"></div>
+  <section id="libraryView" hidden>
+    <section class="tools">
+      <input id="q" placeholder="Buscar Niko, gato, arma, torre, avión, UI...">
+      <select id="cat"><option value="">Todas las categorías</option></select>
+      <select id="subcat"><option value="">Todas las subcategorías</option></select>
+      <select id="repo"><option value="">Todos los proyectos</option></select>
+      <select id="reuse">
+        <option value="">Toda reutilización</option>
+        <option value="listo">Listo para usar</option>
+        <option value="adaptar">Requiere adaptación</option>
+        <option value="referencia">Referencia / código</option>
+      </select>
+      <select id="sort">
+        <option value="name">Nombre</option>
+        <option value="reuse">Reutilización</option>
+        <option value="size">Tamaño</option>
+        <option value="duplicates">Duplicados</option>
+      </select>
+    </section>
+    <section class="summary">
+      <div id="stats"></div>
+      <div id="chips" class="chips"></div>
+    </section>
+    <section id="results" class="grid"></section>
   </section>
-
-  <section id="results" class="grid"></section>
 </main>
 
 <dialog id="detail">
