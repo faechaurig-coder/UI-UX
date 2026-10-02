@@ -73,6 +73,17 @@ function startShelterPuzzle(){
   generateBoard();
 }
 
+function startSafePathPuzzle(){
+  stage=3;
+  objective={type:'drop',target:10,current:0};
+  moves=14;
+  configurePuzzle('SAFE PATH','Clear the water from his way.','key');
+  $('#rescue-peek-copy').textContent='The water is reaching the box.';
+  $('#board-tip').textContent='Clear water pieces so Mochi can reach the carrier.';
+  showScene('puzzle');
+  generateBoard();
+}
+
 function configurePuzzle(kicker,title,type){
   $('#objective-kicker').textContent=kicker;
   $('#objective-title').textContent=title;
@@ -249,10 +260,14 @@ function completePuzzle(){
     $('#complete-title').textContent='He stayed.';
     $('#complete-copy').textContent='You set the food down and gave him space.';
     $('#complete-btn').textContent='Keep watching';
-  }else{
+  }else if(stage===2){
     $('#complete-title').textContent='Dry enough.';
     $('#complete-copy').textContent='The cover muffles the rain. He looks at you twice.';
-    $('#complete-btn').textContent='Stay with him';
+    $('#complete-btn').textContent='Make a safe path';
+  }else{
+    $('#complete-title').textContent='The way is clear.';
+    $('#complete-copy').textContent='Mochi can reach the carrier without stepping into the water.';
+    $('#complete-btn').textContent='Open the carrier';
   }
   panel.hidden=false;
 }
@@ -369,9 +384,8 @@ $('#box-hotspot').addEventListener('click',()=>{
 $('#complete-btn').addEventListener('click',()=>{
   $('#level-complete').hidden=true;
   if(stage===1) enterTrust();
-  else {
-    showScene('rescue');
-  }
+  else if(stage===2) startSafePathPuzzle();
+  else showScene('rescue');
 });
 $('#hand-zone').addEventListener('pointerdown',beginHold);
 $('#hand-zone').addEventListener('pointerup',endHold);
