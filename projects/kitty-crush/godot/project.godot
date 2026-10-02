@@ -1,0 +1,24 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+config/name="Whiskerfolk"
+config/description="A premium cozy cat rescue game about trust, home and character."
+config/version="0.1.0-vertical-slice"
+
+[display]
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[dotnet]
+project/assembly_name="Whiskerfolk"
+
+[rendering]
+renderer/rendering_method="mobile"
+textures/canvas_textures/default_texture_filter=1
+rendering/2d/batching=true
+
+[input_devices]
+pointing/emulate_touch_from_mouse=true
