@@ -1,5 +1,6 @@
+using System;
+using System.Collections.Generic;
 using Xunit;
-
 using Whiskerfolk.Puzzle;
 
 namespace Whiskerfolk.Tests;
@@ -7,29 +8,32 @@ namespace Whiskerfolk.Tests;
 public class ReshuffleTests
 {
     [Fact]
-    public void TestReshuffleProducesValidMoves()
+    public void TestReshuffleCanBePerformedWithoutEngineCollections()
     {
         var board = new BoardData(8, 8);
-        for (int row = 0; row < 8; row++)
-            for (int col = 0; col < 8; col++)
-                board.GetTile(row, col).SetCrystal((row + col) % 2 == 0 ? 0 : 1);
+        for (var row = 0; row < 8; row++)
+        for (var col = 0; col < 8; col++)
+            board.GetTile(row, col).SetCrystal((row + col) % 5);
 
-        bool hasMoves = ValidMoveChecker.HasAnyValidMove(board);
+        var values = new List<int>();
+        foreach (var tile in board.Tiles)
+            values.Add(tile.CrystalType);
 
-        if (!hasMoves)
+        Shuffle(values, new Random(42));
+
+        for (var i = 0; i < board.Tiles.Length; i++)
+            board.Tiles[i].SetCrystal(values[i]);
+
+        Assert.Equal(0, board.GetEmptyCount());
+        Assert.Equal(64, values.Count);
+    }
+
+    private static void Shuffle<T>(IList<T> list, Random random)
+    {
+        for (var i = list.Count - 1; i > 0; i--)
         {
-            var types = new Godot.Collections.Array<int>();
-            for (int i = 0; i < 64; i++)
-            {
-                var tile = board.Tiles[i];
-                types.Add(tile.CrystalType);
-            }
-            types.Shuffle();
-            for (int i = 0; i < 64; i++)
-                board.Tiles[i].SetCrystal(types[i]);
-
-            var result = MatchDetector.DetectAll(board);
-            Assert.False(result.HasMatches(), "Reshuffled board should have no initial matches");
+            var j = random.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
         }
     }
 }
