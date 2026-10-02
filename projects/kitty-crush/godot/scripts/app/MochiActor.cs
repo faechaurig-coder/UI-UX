@@ -1,4 +1,5 @@
 using Godot;
+using System;
 
 namespace Whiskerfolk.App;
 
@@ -11,10 +12,15 @@ public partial class MochiActor : Control
     private static readonly Color Nose = new("#9F6C65");
     private static readonly Color Ink = new("#5C514A");
 
+    private readonly Random _random = new(2190);
     private float _time;
     private float _trust;
-    private bool _blink;
     private string _mood = "watching";
+
+    private float _nextBlink = 2.2f;
+    private float _blinkRemaining;
+    private float _nextEarTwitch = 1.6f;
+    private float _earTwitchRemaining;
 
     public float Trust
     {
@@ -45,91 +51,152 @@ public partial class MochiActor : Control
 
     public override void _Process(double delta)
     {
-        _time += (float)delta;
-        _blink = Mathf.Sin(_time * 1.17f) > 0.985f;
+        var dt = (float)delta;
+        _time += dt;
+
+        _nextBlink -= dt;
+        if (_nextBlink <= 0f)
+        {
+            _blinkRemaining = 0.11f;
+            _nextBlink = 2.4f + (float)_random.NextDouble() * 4.2f;
+        }
+        _blinkRemaining = Mathf.Max(0f, _blinkRemaining - dt);
+
+        _nextEarTwitch -= dt;
+        if (_nextEarTwitch <= 0f)
+        {
+            _earTwitchRemaining = 0.18f;
+            _nextEarTwitch = 3.0f + (float)_random.NextDouble() * 6.0f;
+        }
+        _earTwitchRemaining = Mathf.Max(0f, _earTwitchRemaining - dt);
+
         QueueRedraw();
     }
 
     public override void _Draw()
     {
-        var breath = Mathf.Sin(_time * 2.0f) * 2.3f;
-        var bodyCenter = new Vector2(112, 137 + breath * 0.35f);
-        var headCenter = new Vector2(105, 82 + breath * 0.22f);
+        var relaxed = _mood == "home";
+        var curious = _mood == "curious";
+        var hiding = _mood == "hiding";
 
-        // Tail: broad soft stroke + caramel tip.
-        DrawArc(new Vector2(144, 139), 53, -1.12f, 0.62f, 26, CreamShadow, 18, true);
-        DrawArc(new Vector2(144, 139), 53, 0.30f, 0.62f, 8, Caramel, 19, true);
+        var breathAmplitude = relaxed ? 1.6f : 2.2f;
+        var breath = Mathf.Sin(_time * (relaxed ? 1.55f : 1.9f)) * breathAmplitude;
+        var crouch = hiding ? 8f : 0f;
+        var headShift = new Vector2(
+            curious ? 3f : 0f,
+            crouch + (curious ? -2f : 0f)
+        );
 
-        // Body + chest.
-        DrawCircle(bodyCenter, 61, CreamShadow);
-        DrawCircle(bodyCenter + new Vector2(-8, -4), 55, Cream);
+        Vector2 H(float x, float y) => new(x + headShift.X, y + headShift.Y);
 
-        // Ears behind head.
+        var bodyCenter = new Vector2(112, 137 + crouch + breath * 0.35f);
+        var headCenter = H(105, 82 + breath * 0.22f);
+
+        var tailEnergy = curious ? 0.16f : relaxed ? 0.05f : 0.09f;
+        var tailWave = Mathf.Sin(_time * (curious ? 2.1f : 1.15f)) * tailEnergy;
+
+        // Tail: mood changes the rhythm, but movement stays small and cat-like.
+        DrawArc(
+            new Vector2(144, 139 + crouch),
+            53,
+            -1.12f + tailWave,
+            0.62f + tailWave,
+            26,
+            CreamShadow,
+            18,
+            true
+        );
+        DrawArc(
+            new Vector2(144, 139 + crouch),
+            53,
+            0.30f + tailWave,
+            0.62f + tailWave,
+            8,
+            Caramel,
+            19,
+            true
+        );
+
+        // Body.
+        DrawCircle(bodyCenter, hiding ? 57 : 61, CreamShadow);
+        DrawCircle(bodyCenter + new Vector2(-8, -4), hiding ? 51 : 55, Cream);
+
+        var twitch = _earTwitchRemaining > 0f
+            ? Mathf.Sin((_earTwitchRemaining / 0.18f) * Mathf.Pi) * 5f
+            : 0f;
+
+        // Ears. Mochi's caramel ear carries most of the micro-twitch.
         DrawColoredPolygon(
-            new Vector2[] { new(48, 63), new(66, 18), new(89, 68) },
+            new Vector2[] { H(48, 63), H(66, 18), H(89, 68) },
             Cream
         );
         DrawColoredPolygon(
-            new Vector2[] { new(123, 62), new(151, 17), new(161, 73) },
+            new Vector2[] { H(123, 62), H(151 + twitch, 17 - twitch), H(161, 73) },
             Caramel
         );
         DrawColoredPolygon(
-            new Vector2[] { new(57, 57), new(67, 32), new(80, 61) },
+            new Vector2[] { H(57, 57), H(67, 32), H(80, 61) },
             new Color("#DDB9A7")
         );
         DrawColoredPolygon(
-            new Vector2[] { new(133, 58), new(149, 31), new(153, 63) },
+            new Vector2[] { H(133, 58), H(149 + twitch * 0.6f, 31 - twitch * 0.6f), H(153, 63) },
             new Color("#D7A483")
         );
 
         // Head.
-        DrawCircle(headCenter, 53, Cream);
+        DrawCircle(headCenter, hiding ? 51 : 53, Cream);
 
         // Caramel comma marking.
-        DrawCircle(new Vector2(137, 74), 13, Caramel);
-        DrawCircle(new Vector2(130, 64), 8, Cream);
+        DrawCircle(H(137, 74), 13, Caramel);
+        DrawCircle(H(130, 64), 8, Cream);
 
-        // Eyes.
-        var eyeHeight = _blink ? 1.5f : 8.5f;
-        DrawSetTransform(new Vector2(0, 0), 0, Vector2.One);
-        DrawEllipse(new Vector2(85, 87), new Vector2(6.5f, eyeHeight), Eye);
-        DrawEllipse(new Vector2(124, 87), new Vector2(6.5f, eyeHeight), Eye);
+        var blinking = _blinkRemaining > 0f;
+        var eyeHeight = blinking ? 1.4f : hiding ? 6.8f : relaxed ? 7.6f : 8.5f;
+        var gaze = curious ? Mathf.Sin(_time * 0.55f) * 2.0f : 0f;
 
-        if (!_blink)
+        DrawEllipse(H(85 + gaze, 87), new Vector2(6.5f, eyeHeight), Eye);
+        DrawEllipse(H(124 + gaze, 87), new Vector2(6.5f, eyeHeight), Eye);
+
+        if (!blinking)
         {
-            DrawCircle(new Vector2(83, 84), 2.0f, Colors.White);
-            DrawCircle(new Vector2(122, 84), 2.0f, Colors.White);
+            DrawCircle(H(83 + gaze, 84), 2.0f, Colors.White);
+            DrawCircle(H(122 + gaze, 84), 2.0f, Colors.White);
         }
 
-        // Nose and tiny mouth.
-        DrawCircle(new Vector2(105, 103), 4.8f, Nose);
-        DrawLine(new Vector2(105, 107), new Vector2(105, 112), Ink, 1.6f, true);
-        DrawArc(new Vector2(99, 111), 7, 0.1f, 1.1f, 8, Ink, 1.4f, true);
-        DrawArc(new Vector2(111, 111), 7, 2.0f, 3.0f, 8, Ink, 1.4f, true);
+        // Nose and mouth: neutral, not a permanent cartoon smile.
+        DrawCircle(H(105, 103), 4.8f, Nose);
+        DrawLine(H(105, 107), H(105, 112), Ink, 1.6f, true);
+        DrawArc(H(99, 111), 7, 0.1f, 1.1f, 8, Ink, 1.4f, true);
+        DrawArc(H(111, 111), 7, 2.0f, 3.0f, 8, Ink, 1.4f, true);
 
         // Whiskers.
-        DrawLine(new Vector2(83, 104), new Vector2(48, 98), Ink, 1.1f, true);
-        DrawLine(new Vector2(82, 110), new Vector2(45, 111), Ink, 1.1f, true);
-        DrawLine(new Vector2(128, 104), new Vector2(164, 98), Ink, 1.1f, true);
-        DrawLine(new Vector2(128, 110), new Vector2(166, 112), Ink, 1.1f, true);
+        DrawLine(H(83, 104), H(48, 98), Ink, 1.1f, true);
+        DrawLine(H(82, 110), H(45, 111), Ink, 1.1f, true);
+        DrawLine(H(128, 104), H(164, 98), Ink, 1.1f, true);
+        DrawLine(H(128, 110), H(166, 112), Ink, 1.1f, true);
 
-        // Front paws. Low trust keeps one paw pulled in.
-        DrawCircle(new Vector2(82, 181), 18, Cream);
-        if (_trust > 38 || _mood == "home")
-            DrawCircle(new Vector2(117, 181), 18, Cream);
+        // Front paws. The second paw becomes visible as trust/comfort increases.
+        DrawCircle(new Vector2(82, 181 + crouch), 18, Cream);
+        if (_trust > 38 || relaxed)
+            DrawCircle(new Vector2(117, 181 + crouch), 18, Cream);
 
-        // Mood cue: slight question head-tilt is represented by ear/eye asymmetry later in rig.
-        if (_mood == "hiding")
-            DrawCircle(new Vector2(108, 145), 53, new Color(0.15f, 0.15f, 0.15f, 0.08f));
+        if (hiding)
+        {
+            // Soft occlusion cue; the final rig will use actual object layering.
+            DrawCircle(new Vector2(108, 148 + crouch), 54, new Color(0.15f, 0.15f, 0.15f, 0.07f));
+        }
     }
 
     private void DrawEllipse(Vector2 center, Vector2 radii, Color color)
     {
         var points = new Vector2[24];
-        for (int i = 0; i < points.Length; i++)
+        for (var i = 0; i < points.Length; i++)
         {
             var angle = Mathf.Tau * i / points.Length;
-            points[i] = center + new Vector2(Mathf.Cos(angle) * radii.X, Mathf.Sin(angle) * radii.Y);
+            points[i] = center + new Vector2(
+                Mathf.Cos(angle) * radii.X,
+                Mathf.Sin(angle) * radii.Y
+            );
         }
         DrawColoredPolygon(points, color);
     }
