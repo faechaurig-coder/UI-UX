@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Whiskerfolk</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../scripts/core/puzzle/**/*.cs" />
+    <Compile Include="../scripts/puzzle/**/*.cs" />
+    <Compile Include="../scripts/cats/**/*.cs" />
+    <Compile Include="../scripts/rescue/**/*.cs" />
+    <Compile Include="../scripts/home/**/*.cs" />
+    <Compile Include="../scripts/memories/**/*.cs" />
+    <Compile Include="../scripts/economy/**/*.cs" />
+    <Compile Include="../scripts/analytics/IAnalyticsService.cs" />
+    <Compile Include="../scripts/save/SaveGame.cs" />
+  </ItemGroup>
+</Project>
