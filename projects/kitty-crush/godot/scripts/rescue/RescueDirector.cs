@@ -11,10 +11,10 @@ public sealed class RescueDirector
 
     public event Action<RescueBeat>? BeatChanged;
 
-    public RescueDirector(RescueArc arc)
+    public RescueDirector(RescueArc arc, int startBeatIndex = 0)
     {
         Arc = arc;
-        BeatIndex = 0;
+        BeatIndex = Math.Clamp(startBeatIndex, 0, Math.Max(0, arc.Beats.Count - 1));
     }
 
     public bool TryAdvance(string completedBeatId)
@@ -27,6 +27,12 @@ public sealed class RescueDirector
         BeatIndex++;
         BeatChanged?.Invoke(Current);
         return true;
+    }
+
+    public void RestoreBeat(int beatIndex)
+    {
+        BeatIndex = Math.Clamp(beatIndex, 0, Math.Max(0, Arc.Beats.Count - 1));
+        BeatChanged?.Invoke(Current);
     }
 
     public void Reset()
