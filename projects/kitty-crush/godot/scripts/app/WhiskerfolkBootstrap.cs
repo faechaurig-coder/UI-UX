@@ -64,6 +64,8 @@ public partial class WhiskerfolkBootstrap : Control
     private readonly BehaviorScheduler _homeScheduler = new(seed: 20261001);
     private readonly List<HomeObjectDefinition> _homeObjects = new();
     private readonly Random _homeRandom = new(20261001);
+    private ColorRect? _activeSheetOverlay;
+    private PanelContainer? _activeSheetPanel;
 
     public override void _Ready()
     {
@@ -82,6 +84,46 @@ public partial class WhiskerfolkBootstrap : Control
 
         _rescue = new RescueDirector(RescueArc.MochiFirstNight(), _save.CurrentRescueBeat);
         ResumeFromSave();
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationApplicationPaused)
+        {
+            PersistCurrentState();
+            return;
+        }
+
+        if (what != NotificationWMGoBackRequest)
+            return;
+
+        if (CloseActiveSheet())
+            return;
+
+        PersistCurrentState();
+        GetTree().Quit();
+    }
+
+    private void PersistCurrentState()
+    {
+        if (_save is null)
+            return;
+
+        _save.CurrentRescueBeat = _rescue?.BeatIndex ?? _save.CurrentRescueBeat;
+        _save.CatTrust["mochi"] = _bond.Trust;
+        _saveService.Save(_save);
+    }
+
+    private bool CloseActiveSheet()
+    {
+        if (_activeSheetOverlay is null && _activeSheetPanel is null)
+            return false;
+
+        _activeSheetOverlay?.QueueFree();
+        _activeSheetPanel?.QueueFree();
+        _activeSheetOverlay = null;
+        _activeSheetPanel = null;
+        return true;
     }
 
     private void ResumeFromSave()
@@ -200,6 +242,8 @@ public partial class WhiskerfolkBootstrap : Control
     {
         _homeActive = false;
         _homeRoomRoot = null;
+        _activeSheetOverlay = null;
+        _activeSheetPanel = null;
 
         foreach (var child in GetChildren())
         {
@@ -1076,6 +1120,8 @@ public partial class WhiskerfolkBootstrap : Control
 
     private void ShowSheet(string kicker, string title, string copy)
     {
+        CloseActiveSheet();
+
         var overlay = new ColorRect
         {
             Color = new Color(0.05f,0.07f,0.07f,0.36f),
@@ -1083,6 +1129,7 @@ public partial class WhiskerfolkBootstrap : Control
         };
         overlay.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(overlay);
+        _activeSheetOverlay = overlay;
 
         var panel = new PanelContainer
         {
@@ -1097,6 +1144,7 @@ public partial class WhiskerfolkBootstrap : Control
         };
         panel.AddThemeStyleboxOverride("panel", Box(Milk, 30));
         AddChild(panel);
+        _activeSheetPanel = panel;
 
         var margin = new MarginContainer();
         margin.AddThemeConstantOverride("margin_left", 24);
@@ -1113,11 +1161,7 @@ public partial class WhiskerfolkBootstrap : Control
         col.AddChild(Label(copy, 16, SoftInk));
 
         var close = Button("Close");
-        close.Pressed += () =>
-        {
-            overlay.QueueFree();
-            panel.QueueFree();
-        };
+        close.Pressed += () => CloseActiveSheet();
         col.AddChild(close);
     }
 }
