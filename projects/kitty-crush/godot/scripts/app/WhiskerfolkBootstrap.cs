@@ -162,9 +162,9 @@ public partial class WhiskerfolkBootstrap : Control
         var layer = SafeLayer();
         var column = new VBoxContainer
         {
-            SizeFlagsVertical = SizeFlags.ExpandFill,
-            ThemeOverrideConstants = { ["separation"] = 14 }
+            SizeFlagsVertical = SizeFlags.ExpandFill
         };
+        column.AddThemeConstantOverride("separation", 14);
         layer.AddChild(column);
 
         var brand = Label("WHISKERFOLK", 13, new Color(1,1,1,0.42f), true);
@@ -278,7 +278,8 @@ public partial class WhiskerfolkBootstrap : Control
         _inputLocked = false;
 
         var layer = SafeLayer(22, 26);
-        var column = new VBoxContainer { ThemeOverrideConstants = { ["separation"] = 12 } };
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 12);
         layer.AddChild(column);
 
         var top = new HBoxContainer();
@@ -481,9 +482,9 @@ public partial class WhiskerfolkBootstrap : Control
         var layer = SafeLayer(28, 34);
         var column = new VBoxContainer
         {
-            SizeFlagsVertical = SizeFlags.ExpandFill,
-            ThemeOverrideConstants = { ["separation"] = 14 }
+            SizeFlagsVertical = SizeFlags.ExpandFill
         };
+        column.AddThemeConstantOverride("separation", 14);
         layer.AddChild(column);
 
         column.AddChild(Label("TRUST", 12, Sage, true));
@@ -754,7 +755,8 @@ public partial class WhiskerfolkBootstrap : Control
         margin.AddThemeConstantOverride("margin_bottom", 24);
         panel.AddChild(margin);
 
-        var col = new VBoxContainer { ThemeOverrideConstants = { ["separation"] = 10 } };
+        var col = new VBoxContainer();
+        col.AddThemeConstantOverride("separation", 10);
         margin.AddChild(col);
         col.AddChild(Label(kicker, 11, Moss, true));
         col.AddChild(Label(title, 33, Ink, true));
