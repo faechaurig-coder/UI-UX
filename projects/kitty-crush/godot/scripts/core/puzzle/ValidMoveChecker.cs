@@ -1,4 +1,4 @@
-namespace Match3Demo;
+namespace Whiskerfolk.Puzzle;
 
 public class ValidMoveChecker
 {
