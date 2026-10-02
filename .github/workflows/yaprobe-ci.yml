@@ -1,0 +1,36 @@
+name: YaProbe CI
+
+on:
+  push:
+    branches:
+      - yaprobe-product-v1
+    paths:
+      - 'projects/yaprobe/**'
+      - '.github/workflows/yaprobe-ci.yml'
+  pull_request:
+    paths:
+      - 'projects/yaprobe/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/yaprobe/app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+
+      - name: Install
+        run: npm install
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Expo Doctor
+        run: npx expo-doctor

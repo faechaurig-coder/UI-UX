@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>YaProbé — Prototype</title>
+<style>
+:root{
+  --bg:#f4f4ef;--surface:#fff;--ink:#11130f;--muted:#74776d;--line:#e8e9e2;
+  --lime:#cfff3f;--lime2:#e9ff9b;--amber:#ffbf2f;--danger:#ff6b5e;--soft:#f8f8f4;
+  --r:24px;--shadow:0 24px 80px rgba(25,28,19,.13);
+}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 50% 0,#fff 0,#f3f3ee 44%,#e9eae3 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh}
+button,input{font:inherit} button{cursor:pointer;color:inherit}.stage{min-height:100vh;display:grid;place-items:center;padding:30px}
+.phone{width:min(390px,100vw);height:min(844px,100vh);background:var(--bg);border-radius:44px;box-shadow:var(--shadow);overflow:hidden;position:relative;border:8px solid #171914}
+.screen{position:absolute;inset:0;display:none;overflow:auto;padding:22px 18px 102px;scrollbar-width:none}.screen::-webkit-scrollbar{display:none}.screen.active{display:block}
+.status{height:16px;display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin:0 4px 14px}.brandrow{display:flex;justify-content:space-between;align-items:center}.brand{font-size:24px;font-weight:900;letter-spacing:-1.1px}.brand span{display:inline-grid;place-items:center;width:12px;height:12px;background:var(--lime);border-radius:99px;margin-left:2px}.avatar{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-weight:800}
+.hero{padding:22px 0 12px}.eyebrow{font-size:12px;font-weight:800;color:#5d6155;text-transform:uppercase;letter-spacing:.1em}.hero h1{font-size:34px;line-height:1.02;letter-spacing:-1.7px;margin:7px 0 9px;max-width:330px}.hero p{margin:0;color:var(--muted);line-height:1.4;font-size:14px}
+.search{margin:14px 0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:13px 15px;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px}
+.scanCard{border:none;width:100%;text-align:left;background:var(--ink);color:#fff;border-radius:28px;padding:18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 12px 28px rgba(17,19,15,.12);transition:.18s transform}.scanCard:active{transform:scale(.985)}
+.scanIcon{width:58px;height:58px;border-radius:20px;background:var(--lime);color:var(--ink);display:grid;place-items:center;font-size:25px;font-weight:900}.scanCopy strong{display:block;font-size:17px}.scanCopy span{display:block;color:#bfc3b6;font-size:12px;margin-top:3px}.arrow{font-size:24px;color:var(--lime)}
+.sectionTitle{display:flex;align-items:end;justify-content:space-between;margin:24px 2px 11px}.sectionTitle strong{font-size:17px;letter-spacing:-.4px}.sectionTitle button{border:0;background:none;color:var(--muted);font-size:12px}
+.cards{display:flex;gap:10px;overflow:auto;padding-bottom:3px;scrollbar-width:none}.cards::-webkit-scrollbar{display:none}.productCard{min-width:145px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:12px}
+.prodArt{height:105px;border-radius:17px;background:linear-gradient(145deg,#f0efe8,#fff);display:grid;place-items:center;font-size:52px;position:relative}.miniBadge{position:absolute;top:7px;right:7px;background:var(--lime);border-radius:10px;padding:5px 7px;font-size:10px;font-weight:900}.productCard h3{font-size:13px;margin:10px 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.productCard small{color:var(--muted)}.stars{color:var(--amber);font-size:13px;font-weight:900;margin-top:8px}
+.memory{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px}.metric b{font-size:26px;letter-spacing:-1px}.metric span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.curiosity{margin-top:12px;background:linear-gradient(135deg,var(--lime2),#fff);border:1px solid #dfeaaf;border-radius:22px;padding:16px}.curiosity strong{font-size:14px}.curiosity p{margin:5px 0 0;color:#596044;font-size:12px;line-height:1.4}
+.nav{position:absolute;z-index:20;bottom:0;left:0;right:0;height:84px;background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:5px 26px 12px}.navbtn{border:0;background:none;color:#84877c;font-size:10px;font-weight:700;display:grid;gap:4px;place-items:center}.navbtn i{font-style:normal;font-size:21px}.navbtn.active{color:var(--ink)}.scanFab{position:absolute;left:50%;bottom:55px;transform:translateX(-50%);width:62px;height:62px;border-radius:22px;border:5px solid var(--bg);background:var(--lime);display:grid;place-items:center;font-size:25px;font-weight:900;box-shadow:0 8px 26px rgba(66,73,35,.22)}
+/* scanner */
+#scan{padding:0;background:#151813;color:#fff;overflow:hidden}.camera{position:absolute;inset:0;background:radial-gradient(circle at 72% 30%,#57614b 0,#293125 27%,#141712 62%);overflow:hidden}.camera:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 0 47%,rgba(255,255,255,.07) 48%,transparent 49%)}.scannerTop{position:absolute;top:24px;left:18px;right:18px;display:flex;justify-content:space-between;z-index:2}.roundBtn{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,10,10,.35);color:#fff;display:grid;place-items:center;font-size:18px}.frame{position:absolute;width:270px;height:180px;top:31%;left:50%;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.7);border-radius:28px}.frame:before,.frame:after{content:"";position:absolute;height:4px;width:62px;background:var(--lime);top:-3px;border-radius:5px}.frame:before{left:17px}.frame:after{right:17px}.scanline{position:absolute;left:12px;right:12px;height:1px;background:var(--lime);top:50%;box-shadow:0 0 12px var(--lime);animation:scan 2.2s infinite ease-in-out}@keyframes scan{0%,100%{transform:translateY(-54px);opacity:.5}50%{transform:translateY(54px);opacity:1}}
+.scanHint{position:absolute;top:52%;width:100%;text-align:center;color:#d8dcce;font-size:13px}.simulate{position:absolute;top:58%;left:50%;transform:translateX(-50%);border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:99px;padding:10px 16px;font-weight:800}
+.sheet{position:absolute;left:10px;right:10px;bottom:10px;background:#fff;color:var(--ink);border-radius:30px;padding:10px 16px 18px;transform:translateY(120%);transition:.35s cubic-bezier(.2,.8,.2,1);z-index:3}.sheet.show{transform:none}.grab{width:38px;height:4px;background:#dadcd4;border-radius:9px;margin:0 auto 12px}.recognized{font-size:12px;font-weight:900;color:#596446;text-transform:uppercase;letter-spacing:.08em}.foundrow{display:flex;gap:13px;margin:10px 0 14px}.foundArt{width:78px;height:88px;border-radius:19px;background:#f1f0e9;display:grid;place-items:center;font-size:42px}.foundInfo{flex:1}.foundInfo h2{font-size:18px;line-height:1.1;margin:2px 0 5px}.foundInfo small{color:var(--muted)}.ownBox{background:#f8f8f4;border:1px solid var(--line);border-radius:20px;padding:13px}.ownTop{display:flex;justify-content:space-between;align-items:center}.ownTop b{font-size:15px}.noBuy{font-size:11px;font-weight:900;color:#a13a31;background:#ffe9e5;padding:6px 8px;border-radius:10px}.note{font-size:12px;color:#606357;margin-top:9px;line-height:1.35}.price{margin-top:8px;font-size:11px;color:var(--muted)}.primary{width:100%;border:0;border-radius:16px;background:var(--ink);color:#fff;padding:14px;font-weight:900;margin-top:12px}.secondary{width:100%;border:1px solid var(--line);border-radius:16px;background:#fff;padding:13px;font-weight:800;margin-top:8px}
+/* history */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}.topbar button{width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid var(--line)}.topbar h2{font-size:22px;margin:0;letter-spacing:-.8px}.chips{display:flex;gap:7px;overflow:auto;margin-bottom:12px}.chip{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 11px;font-size:11px;font-weight:800}.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.list{display:grid;gap:9px}.row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:10px}.rowArt{width:59px;height:59px;border-radius:16px;background:#f2f1ea;display:grid;place-items:center;font-size:31px}.rowInfo{min-width:0;flex:1}.rowInfo b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rowInfo small{color:var(--muted);font-size:10px}.rowMeta{text-align:right}.rowMeta strong{display:block;color:var(--amber);font-size:13px}.rowMeta span{font-size:10px;color:var(--muted)}
+/* product */
+.productHero{text-align:center;padding-top:10px}.bigArt{width:180px;height:190px;border-radius:34px;background:linear-gradient(145deg,#eeeee7,#fff);margin:0 auto 14px;display:grid;place-items:center;font-size:92px}.productHero h1{font-size:23px;letter-spacing:-.8px;margin:4px 0}.productHero p{color:var(--muted);margin:0;font-size:12px}.pill{display:inline-block;background:#eef0e8;color:#555a4e;border-radius:99px;padding:7px 10px;font-size:10px;font-weight:800;margin-top:8px}.panel{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:15px}.panelHead{display:flex;justify-content:space-between;align-items:center}.panelHead strong{font-size:13px}.score{font-size:34px;font-weight:950;letter-spacing:-2px}.score span{font-size:18px;color:var(--amber)}.communityGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}.tinyMetric{background:var(--soft);border-radius:14px;padding:10px;text-align:center}.tinyMetric b{font-size:14px}.tinyMetric span{display:block;color:var(--muted);font-size:9px;margin-top:2px}
+/* rating */
+.ratingTitle{text-align:center;padding:10px 0}.ratingTitle h1{font-size:26px;margin:5px 0}.ratingTitle p{color:var(--muted);font-size:12px}.starsBig{display:flex;justify-content:center;gap:8px;margin:24px 0}.starBtn{border:0;background:none;font-size:39px;color:#dedfd9;padding:0}.starBtn.on{color:var(--amber);transform:scale(1.05)}.question{font-size:14px;font-weight:900;margin:19px 0 9px}.segments{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}.seg{border:1px solid var(--line);background:#fff;border-radius:15px;padding:12px 5px;font-size:12px;font-weight:800}.seg.on{background:var(--ink);color:#fff}.optional{border:1px solid var(--line);background:#fff;border-radius:18px;padding:13px;margin-top:14px}.optional summary{font-size:12px;font-weight:850;cursor:pointer}.fields{display:grid;gap:8px;margin-top:10px}.fields input{width:100%;border:1px solid var(--line);border-radius:13px;padding:11px;background:#fbfbf8;font-size:12px}
+.toast{position:absolute;z-index:99;left:50%;bottom:110px;transform:translate(-50%,20px);background:var(--ink);color:#fff;border-radius:15px;padding:11px 15px;font-size:11px;font-weight:800;opacity:0;pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:430px){.stage{padding:0}.phone{width:100vw;height:100vh;border:0;border-radius:0}.screen{padding-top:max(18px,env(safe-area-inset-top))}.nav{padding-bottom:max(10px,env(safe-area-inset-bottom))}}
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="phone">
+  <div class="screen active" id="home">
+    <div class="status"><span>9:41</span><span>● ●● 100%</span></div>
+    <div class="brandrow"><div class="brand">YaProbé<span></span></div><button class="avatar" onclick="go('profile')">F</button></div>
+    <div class="hero"><div class="eyebrow">Tu memoria de compras</div><h1>Que no se te olvide si valía la pena.</h1><p>Escanea lo que compras. La próxima vez, YaProbé te recuerda qué pensaste.</p></div>
+    <div class="search">⌕ <span>Producto, marca o código…</span></div>
+    <button class="scanCard" onclick="go('scan')"><div class="scanIcon">⌗</div><div class="scanCopy"><strong>Escanear producto</strong><span>Descubre si ya lo probaste</span></div><div class="arrow">→</div></button>
+
+    <div class="sectionTitle"><strong>Últimos que probaste</strong><button onclick="go('history')">Ver todos</button></div>
+    <div class="cards">
+      <div class="productCard" onclick="go('product')"><div class="prodArt">🍷<span class="miniBadge">NO</span></div><h3>Cabernet Reserva</h3><small>Viña del Valle</small><div class="stars">★★☆☆☆</div></div>
+      <div class="productCard"><div class="prodArt">☕<span class="miniBadge">SÍ</span></div><h3>Colombia Intenso</h3><small>Café Norte</small><div class="stars">★★★★★</div></div>
+      <div class="productCard"><div class="prodArt">🍫<span class="miniBadge">SÍ</span></div><h3>70% cacao</h3><small>Montaña</small><div class="stars">★★★★☆</div></div>
+    </div>
+
+    <div class="sectionTitle"><strong>Tu memoria</strong></div>
+    <div class="memory"><div class="metric"><b>23</b><span>productos probados</span></div><div class="metric"><b>8</b><span>sí comprarías otra vez</span></div></div>
+    <div class="curiosity"><strong>Tu gusto por café ya tiene patrón ☕</strong><p>Has calificado 7 cafés. Tres comparten algo: intensidad alta y poca dulzura.</p></div>
+  </div>
+
+  <div class="screen" id="scan">
+    <div class="camera">
+      <div class="scannerTop"><button class="roundBtn" onclick="go('home')">←</button><button class="roundBtn">☼</button></div>
+      <div class="frame"><div class="scanline"></div></div>
+      <div class="scanHint">Apunta al código de barras</div>
+      <button class="simulate" onclick="found()">Simular escaneo</button>
+      <div class="sheet" id="foundSheet">
+        <div class="grab"></div><div class="recognized">✓ Sí, ya lo probaste</div>
+        <div class="foundrow"><div class="foundArt">🍷</div><div class="foundInfo"><h2>Cabernet Reserva 750 ml</h2><small>Viña del Valle · Vino tinto</small><div class="stars">★★☆☆☆ 2.0</div></div></div>
+        <div class="ownBox"><div class="ownTop"><b>Tu opinión</b><span class="noBuy">No repetirías</span></div><div class="note">“Muy dulce para mí. Por ese precio prefiero otra opción.”</div><div class="price">Última vez: $149 · hace 4 meses</div></div>
+        <button class="primary" onclick="go('product')">Ver producto</button><button class="secondary" onclick="go('rate')">Actualizar mi opinión</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="history">
+    <div class="status"><span>9:41</span><span>● ●● 100%</span></div>
+    <div class="topbar"><button onclick="go('home')">←</button><h2>Mis pruebas</h2></div>
+    <div class="search">⌕ <span>Buscar en mi memoria…</span></div>
+    <div class="chips"><button class="chip on">Todos</button><button class="chip">Sí repetiría</button><button class="chip">No</button><button class="chip">Café</button><button class="chip">Vinos</button></div>
+    <div class="list">
+      <div class="row" onclick="go('product')"><div class="rowArt">🍷</div><div class="rowInfo"><b>Cabernet Reserva</b><small>Viña del Valle · hace 4 meses</small></div><div class="rowMeta"><strong>★★☆☆☆</strong><span>$149 · No</span></div></div>
+      <div class="row"><div class="rowArt">☕</div><div class="rowInfo"><b>Colombia Intenso</b><small>Café Norte · hace 9 días</small></div><div class="rowMeta"><strong>★★★★★</strong><span>$189 · Sí</span></div></div>
+      <div class="row"><div class="rowArt">🍫</div><div class="rowInfo"><b>Chocolate 70%</b><small>Montaña · hace 12 días</small></div><div class="rowMeta"><strong>★★★★☆</strong><span>$72 · Sí</span></div></div>
+      <div class="row"><div class="rowArt">🧴</div><div class="rowInfo"><b>Shampoo Repair+</b><small>Nova Care · hace 18 días</small></div><div class="rowMeta"><strong>★★★☆☆</strong><span>$128 · Tal vez</span></div></div>
+      <div class="row"><div class="rowArt">🥤</div><div class="rowInfo"><b>Agua mineral lima</b><small>Brisa · hace 21 días</small></div><div class="rowMeta"><strong>★★★★★</strong><span>$24 · Sí</span></div></div>
+    </div>
+  </div>
+
+  <div class="screen" id="product">
+    <div class="status"><span>9:41</span><span>● ●● 100%</span></div>
+    <div class="topbar"><button onclick="go('home')">←</button><h2>Producto</h2></div>
+    <div class="productHero"><div class="bigArt">🍷</div><h1>Cabernet Reserva 750 ml</h1><p>Viña del Valle · Cabernet Sauvignon</p><span class="pill">Vino tinto</span></div>
+    <div class="panel">
+      <div class="panelHead"><strong>Tu opinión</strong><button class="chip" onclick="go('rate')">Editar</button></div>
+      <div class="score">2.0 <span>★</span></div>
+      <div class="ownTop"><span class="noBuy">No lo comprarías otra vez</span><span style="font-size:11px;color:var(--muted)">$149</span></div>
+      <div class="note">Muy dulce para mí. Por ese precio prefiero otra opción.</div>
+    </div>
+    <div class="panel">
+      <div class="panelHead"><strong>Comunidad</strong><span style="font-size:10px;color:var(--muted)">1,842 opiniones</span></div>
+      <div class="score">4.3 <span>★</span></div>
+      <div class="communityGrid"><div class="tinyMetric"><b>78%</b><span>lo repetiría</span></div><div class="tinyMetric"><b>$171</b><span>precio medio</span></div><div class="tinyMetric"><b>Alta</b><span>confianza</span></div></div>
+    </div>
+    <div class="curiosity"><strong>Tu opinión va contra la mayoría.</strong><p>Eso es útil: con más ratings podremos encontrar personas cuyo gusto se parece al tuyo, no solo mostrarte el promedio.</p></div>
+  </div>
+
+  <div class="screen" id="rate">
+    <div class="status"><span>9:41</span><span>● ●● 100%</span></div>
+    <div class="topbar"><button onclick="go('product')">←</button><h2>Tu opinión</h2></div>
+    <div class="ratingTitle"><div class="foundArt" style="margin:auto">🍷</div><h1>¿Qué te pareció?</h1><p>Cabernet Reserva · Viña del Valle</p></div>
+    <div class="starsBig" id="ratingStars">
+      <button class="starBtn" onclick="setStars(1)">★</button><button class="starBtn" onclick="setStars(2)">★</button><button class="starBtn" onclick="setStars(3)">★</button><button class="starBtn" onclick="setStars(4)">★</button><button class="starBtn" onclick="setStars(5)">★</button>
+    </div>
+    <div class="question">¿Lo comprarías otra vez?</div>
+    <div class="segments"><button class="seg" onclick="selectSeg(this)">Sí</button><button class="seg" onclick="selectSeg(this)">Tal vez</button><button class="seg" onclick="selectSeg(this)">No</button></div>
+    <details class="optional"><summary>+ Precio y nota (opcional)</summary><div class="fields"><input placeholder="Precio, ej. 149"/><input placeholder="Una nota para tu yo del futuro…"/></div></details>
+    <button class="primary" style="margin-top:18px" onclick="saved()">Guardar en mi memoria</button>
+  </div>
+
+  <div class="screen" id="profile">
+    <div class="status"><span>9:41</span><span>● ●● 100%</span></div>
+    <div class="topbar"><button onclick="go('home')">←</button><h2>Tu perfil</h2></div>
+    <div class="panel"><div class="eyebrow">Tu memoria</div><div class="score">23</div><div style="color:var(--muted);font-size:12px">productos probados en 6 categorías</div></div>
+    <div class="panel"><div class="panelHead"><strong>Tu top personal</strong></div><div class="list" style="margin-top:10px"><div class="row"><div class="rowArt">☕</div><div class="rowInfo"><b>Colombia Intenso</b><small>Café Norte</small></div><div class="rowMeta"><strong>★★★★★</strong></div></div><div class="row"><div class="rowArt">🥤</div><div class="rowInfo"><b>Agua mineral lima</b><small>Brisa</small></div><div class="rowMeta"><strong>★★★★★</strong></div></div></div></div>
+    <div class="curiosity"><strong>Protege tu memoria</strong><p>En producción, el usuario puede comenzar anónimo. Después de crear valor, le ofrecemos vincular Google o correo para no perder su historial.</p></div>
+  </div>
+
+  <button class="scanFab" id="fab" onclick="go('scan')">⌗</button>
+  <div class="nav" id="nav"><button class="navbtn active" onclick="go('home')"><i>⌂</i>Inicio</button><button class="navbtn" onclick="go('history')"><i>☷</i>Mis pruebas</button><button class="navbtn" onclick="go('profile')"><i>◉</i>Perfil</button></div>
+  <div class="toast" id="toast">✓ Listo. La próxima vez te lo recordaré.</div>
+</div>
+</div>
+<script>
+const screens=[...document.querySelectorAll('.screen')];
+function go(id){
+  screens.forEach(s=>s.classList.toggle('active',s.id===id));
+  const scanner=id==='scan';
+  document.getElementById('nav').style.display=scanner?'none':'grid';
+  document.getElementById('fab').style.display=scanner?'none':'grid';
+  if(id!=='scan') document.getElementById('foundSheet').classList.remove('show');
+  document.querySelectorAll('.navbtn').forEach((b,i)=>b.classList.toggle('active',(id==='home'&&i===0)||(id==='history'&&i===1)||(id==='profile'&&i===2)));
+}
+function found(){document.getElementById('foundSheet').classList.add('show'); if(navigator.vibrate) navigator.vibrate(35)}
+function setStars(n){document.querySelectorAll('.starBtn').forEach((b,i)=>b.classList.toggle('on',i<n)); if(navigator.vibrate) navigator.vibrate(12)}
+function selectSeg(el){document.querySelectorAll('.seg').forEach(x=>x.classList.remove('on'));el.classList.add('on')}
+function saved(){const t=document.getElementById('toast');t.classList.add('show');if(navigator.vibrate)navigator.vibrate([18,25,30]);setTimeout(()=>{t.classList.remove('show');go('product')},1200)}
+</script>
+</body>
+</html>
