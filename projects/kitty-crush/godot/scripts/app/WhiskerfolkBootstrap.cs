@@ -7,6 +7,9 @@ using Whiskerfolk.Puzzle;
 using Whiskerfolk.Rescue;
 using Whiskerfolk.Home;
 using Whiskerfolk.Memories;
+using Whiskerfolk.Analytics;
+using Whiskerfolk.Services;
+using Whiskerfolk.Save;
 
 namespace Whiskerfolk.App;
 
@@ -35,6 +38,10 @@ public partial class WhiskerfolkBootstrap : Control
 
     private RescueDirector _rescue = null!;
     private BondState _bond = new();
+    private readonly IAnalyticsService _analytics = new DebugAnalyticsService();
+    private readonly HapticsService _haptics = new();
+    private readonly SaveService _saveService = new();
+    private SaveGame _save = null!;
     private BoardData? _board;
     private ObjectiveProgress? _objective;
     private GridContainer? _grid;
@@ -52,8 +59,53 @@ public partial class WhiskerfolkBootstrap : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _rescue = new RescueDirector(RescueArc.MochiFirstNight());
-        BuildIntro();
+
+        _save = _saveService.LoadOrCreate();
+        if (_save.CatTrust.TryGetValue("mochi", out var savedTrust))
+            _bond.AddTrust(savedTrust);
+
+        _rescue = new RescueDirector(RescueArc.MochiFirstNight(), _save.CurrentRescueBeat);
+        ResumeFromSave();
+    }
+
+    private void ResumeFromSave()
+    {
+        switch (_rescue.BeatIndex)
+        {
+            case 0:
+                BuildIntro();
+                break;
+            case 1:
+                BuildFoodPuzzle();
+                break;
+            case 2:
+                BuildTrust();
+                break;
+            case 3:
+                BuildShelterPuzzle();
+                break;
+            case 4:
+            case 5:
+                BuildSafePathPuzzle();
+                break;
+            case 6:
+                BuildRescue();
+                break;
+            default:
+                BuildHome();
+                break;
+        }
+    }
+
+    private bool AdvanceStory(string completedBeatId)
+    {
+        if (!AdvanceStory(completedBeatId))
+            return false;
+
+        _save.CurrentRescueBeat = _rescue.BeatIndex;
+        _save.CatTrust["mochi"] = _bond.Trust;
+        _saveService.Save(_save);
+        return true;
     }
 
     public override void _Process(double delta)
@@ -74,6 +126,9 @@ public partial class WhiskerfolkBootstrap : Control
         {
             _holdingTrust = false;
             _bond.SetForStoryBeat(BondLevel.Testing);
+            _analytics.Track(AnalyticsEvents.FirstTrustResponse);
+            _haptics.Affection();
+            AdvanceStory("first_trust");
             BuildShelterPuzzle();
         }
     }
@@ -158,6 +213,7 @@ public partial class WhiskerfolkBootstrap : Control
     private void BuildIntro()
     {
         ClearScreen(Night);
+        _analytics.Track(AnalyticsEvents.FirstMochiSeen);
 
         var layer = SafeLayer();
         var column = new VBoxContainer
@@ -221,7 +277,7 @@ public partial class WhiskerfolkBootstrap : Control
         var action = Button("Look closer");
         action.Pressed += () =>
         {
-            _rescue.TryAdvance("discover_box");
+            AdvanceStory("discover_box");
             BuildFoodPuzzle();
         };
         column.AddChild(action);
@@ -242,7 +298,7 @@ public partial class WhiskerfolkBootstrap : Control
             () =>
             {
                 _bond.SetForStoryBeat(BondLevel.Tolerating);
-                _rescue.TryAdvance("food_help");
+                AdvanceStory("food_help");
                 BuildTrust();
             }
         );
@@ -257,9 +313,8 @@ public partial class WhiskerfolkBootstrap : Control
             16,
             () =>
             {
-                _rescue.TryAdvance("first_trust");
-                _rescue.TryAdvance("shelter_help");
-                _rescue.TryAdvance("water_rises");
+                AdvanceStory("shelter_help");
+                AdvanceStory("water_rises");
                 BuildSafePathPuzzle();
             }
         );
@@ -275,6 +330,7 @@ public partial class WhiskerfolkBootstrap : Control
         ClearScreen(Milk);
         _objective = new ObjectiveProgress(definition);
         _moves = moves;
+        _analytics.Track(AnalyticsEvents.FirstPuzzleStarted, new Dictionary<string, object?> { ["objective"] = definition.Id });
         _selected = null;
         _inputLocked = false;
 
@@ -332,6 +388,9 @@ public partial class WhiskerfolkBootstrap : Control
             if (progress.Complete)
             {
                 _inputLocked = true;
+                _analytics.Track(AnalyticsEvents.FirstPuzzleCompleted, new Dictionary<string, object?> { ["objective"] = progress.Definition.Id });
+                _save.CatTrust["mochi"] = _bond.Trust;
+                _saveService.Save(_save);
                 var complete = Button(definition.Id == "collect_food" ? "He stayed. Keep watching" : "Dry enough. Stay with him");
                 complete.Pressed += onComplete;
                 column.AddChild(complete);
@@ -426,6 +485,7 @@ public partial class WhiskerfolkBootstrap : Control
         }
 
         _moves--;
+        _haptics.Selection();
         if (_movesLabel is not null)
             _movesLabel.Text = $"Moves  {_moves}";
 
@@ -457,6 +517,7 @@ public partial class WhiskerfolkBootstrap : Control
         while (current.HasMatches() && cascadeGuard++ < 12)
         {
             var positions = current.GetAllPositions().Distinct().ToList();
+            _haptics.Match();
 
             foreach (var pos in positions)
             {
@@ -553,7 +614,7 @@ public partial class WhiskerfolkBootstrap : Control
             14,
             () =>
             {
-                _rescue.TryAdvance("safe_path");
+                AdvanceStory("safe_path");
                 BuildRescue();
             }
         );
@@ -562,6 +623,7 @@ public partial class WhiskerfolkBootstrap : Control
     private void BuildRescue()
     {
         ClearScreen(new Color("#20353F"));
+        _analytics.Track(AnalyticsEvents.RescueStarted);
 
         var layer = SafeLayer();
         var column = new VBoxContainer
@@ -611,7 +673,9 @@ public partial class WhiskerfolkBootstrap : Control
         open.Pressed += () =>
         {
             _bond.SetForStoryBeat(BondLevel.TrustingAction);
-            _rescue.TryAdvance("carrier_choice");
+            _analytics.Track(AnalyticsEvents.RescueCompleted);
+            _haptics.Rescue();
+            AdvanceStory("carrier_choice");
             open.Text = "Wait…";
             open.Disabled = true;
             GetTree().CreateTimer(1.3).Timeout += () =>
@@ -633,9 +697,18 @@ public partial class WhiskerfolkBootstrap : Control
     private void BuildHome()
     {
         ClearScreen(new Color("#E9D8C0"));
+        _analytics.Track(AnalyticsEvents.BoxMomentStarted);
         _bond.SetForStoryBeat(BondLevel.NewHome);
-        _rescue.TryAdvance("ride_home");
-        _rescue.TryAdvance("box_moment");
+        AdvanceStory("ride_home");
+        AdvanceStory("box_moment");
+        _save.RescuedCats.Add("mochi");
+        _save.Memories.Add(MochiMemories.FirstNight.Id);
+        _save.CatTrust["mochi"] = _bond.Trust;
+        _saveService.Save(_save);
+        _analytics.Track(AnalyticsEvents.BoxMomentCompleted);
+        _analytics.Track(AnalyticsEvents.HomeFirstEntry);
+        _analytics.Track(AnalyticsEvents.FirstMemoryCreated);
+        _haptics.Affection();
 
         var layer = SafeLayer();
         var column = new VBoxContainer
