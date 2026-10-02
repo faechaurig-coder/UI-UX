@@ -29,8 +29,54 @@ nav{height:66px;display:flex;align-items:center;gap:20px;padding:0 5vw;backgroun
 .footer{padding:21px 6vw;background:#0c1310;color:#9daba3;display:flex;justify-content:space-between;font-size:12px}.reveal{opacity:0;transform:translateY(22px);transition:.65s}.reveal.visible{opacity:1;transform:none}
 .c2 .hero{background:linear-gradient(135deg,#fffdfa,#fff5eb)}.c2 .hero-media:after{background:linear-gradient(90deg,#fffdfa,transparent 25%),linear-gradient(0deg,#ef682833,transparent 50%)}.c2 h1 em{color:var(--a);font-style:normal}
 .c3 .hero{background:linear-gradient(135deg,#f5f0e8,#eee2d1)}.c3 .hero-media:after{background:linear-gradient(90deg,#f5f0e8,transparent 25%),linear-gradient(0deg,#5e3f2d2e,transparent 50%)}
-@media(max-width:950px){.concept.on{zoom:1}.links{display:none}.hero{grid-template-columns:1fr}.hero-copy{padding:62px 7vw 34px}.hero-media{min-height:390px}.head,.problemgrid,.visual-row,.cta{grid-template-columns:1fr}.services{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.switcher{overflow:auto}.switcher strong{display:none}.switcher button{white-space:nowrap}.services,.metrics,.product-mini{grid-template-columns:1fr}.section{padding:56px 6vw}.hero h1{font-size:46px}.footer{display:block}.nav .btn{display:none}}
+@media(max-width:950px){.links{display:none}.hero{grid-template-columns:1fr}.hero-copy{padding:46px 6vw 28px}.hero-media{min-height:320px}.head,.problemgrid,.visual-row,.cta{grid-template-columns:1fr}.services{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){
+    .concept.on{zoom:1}
+    .switcher{overflow:auto;padding:7px 10px;gap:7px}
+    .switcher strong{display:none}
+    .switcher button{white-space:nowrap;padding:8px 11px;font-size:10px}
+    nav{height:58px;padding:0 4.5vw;gap:10px}
+    .logo{font-size:18px;gap:7px}
+    .logo svg{width:30px;height:30px}
+    nav>.btn{display:none}
+    .hero{display:flex;flex-direction:column;min-height:auto}
+    .hero-copy{order:1;padding:32px 5vw 24px}
+    .hero-media{order:2;min-height:250px;height:250px;margin:0 5vw 22px;border-radius:20px}
+    .hero-media:after{background:linear-gradient(0deg,#0004,transparent 55%)}
+    .badge{right:12px;bottom:12px;padding:9px 12px;border-radius:12px;font-size:11px}
+    .eyebrow{font-size:9px;letter-spacing:.14em}
+    .hero h1{font-size:34px;line-height:1.02;letter-spacing:-.025em;margin:9px 0 14px}
+    .hero p{font-size:14px;line-height:1.45;margin:0}
+    .actions{margin-top:18px;gap:8px}
+    .btn{padding:10px 14px;font-size:12px}
+    .metrics{grid-template-columns:1fr 1fr;padding:0 4vw}
+    .metric{padding:13px 10px}
+    .metric b{font-size:15px}
+    .metric span{font-size:10px}
+    .section{padding:40px 5vw}
+    .head{gap:8px;margin-bottom:20px}
+    .head h2{font-size:31px;line-height:1.05}
+    .head p{font-size:14px;line-height:1.45}
+    .problemgrid{grid-template-columns:1fr;gap:12px}
+    .box{min-height:0;padding:18px;border-radius:16px}
+    .box h3{font-size:23px}
+    .box p{font-size:13px}
+    .checks{grid-template-columns:1fr 1fr;gap:7px}
+    .checks span{font-size:11px}
+    .services,.product-mini{grid-template-columns:1fr 1fr}
+    .service{padding:14px}
+    .service .ico{width:36px;height:36px;border-radius:10px;margin-bottom:10px}
+    .service h3{font-size:14px}
+    .service p{font-size:11px}
+    .visual-row{gap:16px}
+    .photo{height:210px;border-radius:18px}
+    .product-mini div{padding:12px}
+    .cta{padding:38px 5vw;gap:18px}
+    .cta h2{font-size:30px}
+    .cta p{font-size:13px}
+    .contact{padding:15px;font-size:12px}
+    .footer{display:block;padding:18px 5vw}
+  }
 </style>
 </head>
 <body>
