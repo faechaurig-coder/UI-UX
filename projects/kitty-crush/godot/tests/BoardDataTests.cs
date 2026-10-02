@@ -1,4 +1,3 @@
-using Godot;
 using Xunit;
 
 using Whiskerfolk.Puzzle;
@@ -15,7 +14,7 @@ public class BoardDataTests
         Assert.Equal(63, board.GetIndex(7, 7));
         Assert.Equal(29, board.GetIndex(3, 5));
         var rc = board.RowCol(29);
-        Assert.Equal(new Vector2I(5, 3), rc); // (col=5, row=3)
+        Assert.Equal(new GridPos(5, 3), rc); // (col=5, row=3)
     }
 
     [Fact]
