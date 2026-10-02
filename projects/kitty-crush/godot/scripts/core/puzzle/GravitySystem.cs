@@ -1,9 +1,8 @@
-using Godot;
 using System.Collections.Generic;
 
 namespace Whiskerfolk.Puzzle;
 
-public class GravitySystem
+public static class GravitySystem
 {
     private const float FallBase = 0.1f;
     private const float FallPerRow = 0.08f;
@@ -11,34 +10,31 @@ public class GravitySystem
     public static List<FallInfo> ApplyGravity(BoardData board)
     {
         var allFalls = new List<FallInfo>();
-        for (int col = 0; col < board.Cols; col++)
-        {
-            var falls = ProcessColumn(board, col);
-            allFalls.AddRange(falls);
-        }
+        for (var col = 0; col < board.Cols; col++)
+            allFalls.AddRange(ProcessColumn(board, col));
         return allFalls;
     }
 
     private static List<FallInfo> ProcessColumn(BoardData board, int col)
     {
         var falls = new List<FallInfo>();
-        int writeRow = board.Rows - 1;
+        var writeRow = board.Rows - 1;
 
-        for (int readRow = board.Rows - 1; readRow >= 0; readRow--)
+        for (var readRow = board.Rows - 1; readRow >= 0; readRow--)
         {
             var tile = board.GetTile(readRow, col);
-            if (tile.IsEmpty)
-                continue;
+            if (tile.IsEmpty) continue;
 
             if (readRow != writeRow)
             {
-                var info = new FallInfo();
-                info.FromRow = readRow;
-                info.ToRow = writeRow;
-                info.Col = col;
-                info.CrystalType = tile.CrystalType;
-                info.SpecialType = tile.SpecialType;
-                falls.Add(info);
+                falls.Add(new FallInfo
+                {
+                    FromRow = readRow,
+                    ToRow = writeRow,
+                    Col = col,
+                    CrystalType = tile.CrystalType,
+                    SpecialType = tile.SpecialType
+                });
 
                 board.Swap(readRow, col, writeRow, col);
             }
@@ -46,30 +42,21 @@ public class GravitySystem
             writeRow--;
         }
 
-        for (int row = writeRow; row >= 0; row--)
-        {
+        for (var row = writeRow; row >= 0; row--)
             board.GetTile(row, col).Clear();
-        }
 
         return falls;
     }
 
-    public class FallInfo
+    public sealed class FallInfo
     {
-        public int FromRow;
-        public int ToRow;
-        public int Col;
-        public int CrystalType = -1;
-        public int SpecialType = -1;
+        public int FromRow { get; init; }
+        public int ToRow { get; init; }
+        public int Col { get; init; }
+        public int CrystalType { get; init; } = -1;
+        public int SpecialType { get; init; } = -1;
 
-        public int GetDistance()
-        {
-            return ToRow - FromRow;
-        }
-
-        public float GetDuration()
-        {
-            return FallBase + (float)GetDistance() * FallPerRow;
-        }
+        public int GetDistance() => ToRow - FromRow;
+        public float GetDuration() => FallBase + GetDistance() * FallPerRow;
     }
 }
