@@ -1,7 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 
-namespace Match3Demo;
+namespace Whiskerfolk.Puzzle;
 
 public class SpawnSystem
 {
