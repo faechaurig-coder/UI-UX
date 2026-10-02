@@ -1,4 +1,3 @@
-using Godot;
 using Xunit;
 
 using Whiskerfolk.Puzzle;
@@ -16,9 +15,9 @@ public class ScoreCalculatorTests
             MatchLength = 3,
             Positions = new()
             {
-                new Vector2I(0, 0),
-                new Vector2I(1, 0),
-                new Vector2I(2, 0),
+                new GridPos(0, 0),
+                new GridPos(1, 0),
+                new GridPos(2, 0),
             },
         };
         Assert.Equal(30, ScoreCalculator.CalculateGroupScore(group));
