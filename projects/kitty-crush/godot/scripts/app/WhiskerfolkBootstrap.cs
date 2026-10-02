@@ -55,6 +55,14 @@ public partial class WhiskerfolkBootstrap : Control
     private ProgressBar? _trustBar;
     private Label? _trustCopy;
     private MochiActor? _mochi;
+    private int _trustApproachPhase;
+    private bool _homeActive;
+    private float _homeBehaviorTimer;
+    private Control? _homeRoomRoot;
+    private CatState? _homeCatState;
+    private readonly BehaviorScheduler _homeScheduler = new(seed: 20261001);
+    private readonly List<HomeObjectDefinition> _homeObjects = new();
+    private readonly Random _homeRandom = new(20261001);
 
     public override void _Ready()
     {
@@ -113,31 +121,78 @@ public partial class WhiskerfolkBootstrap : Control
 
     public override void _Process(double delta)
     {
-        if (!_holdingTrust || _trustBar is null)
-            return;
+        if (_holdingTrust && _trustBar is not null)
+            ProcessTrust((float)delta);
 
-        _holdProgress += (float)delta * 29f;
-        _bond.AddTrust((float)delta * 25f);
-        _trustBar.Value = _holdProgress;
+        if (_homeActive)
+        {
+            _homeBehaviorTimer -= (float)delta;
+            if (_homeBehaviorTimer <= 0f)
+                RunHomeBehavior();
+        }
+    }
+
+    private void ProcessTrust(float delta)
+    {
+        // Deliberately slower than a normal progress meter: this is a relationship beat,
+        // not a button-hold skill check.
+        _holdProgress = Mathf.Min(100f, _holdProgress + delta * 6.2f);
+        _bond.AddTrust(delta * 4.5f);
+
+        if (_trustBar is not null)
+            _trustBar.Value = _holdProgress;
+
         if (_mochi is not null)
             _mochi.Trust = _holdProgress;
 
-        if (_holdProgress > 36 && _trustCopy is not null)
-            _trustCopy.Text = "He came closer. Then backed away. Then came back.";
-
-        if (_holdProgress >= 100)
+        if (_mochi is not null && _trustApproachPhase == 0 && _holdProgress >= 30f)
         {
-            _holdingTrust = false;
-            _bond.SetForStoryBeat(BondLevel.Testing);
-            _analytics.Track(AnalyticsEvents.FirstTrustResponse);
-            _haptics.Affection();
-            AdvanceStory("first_trust");
-            BuildShelterPuzzle();
+            _trustApproachPhase = 1;
+            MoveMochi(new Vector2(108, 220), 0.7);
+            if (_trustCopy is not null)
+                _trustCopy.Text = "He moved closer.";
         }
+        else if (_mochi is not null && _trustApproachPhase == 1 && _holdProgress >= 52f)
+        {
+            _trustApproachPhase = 2;
+            MoveMochi(new Vector2(84, 220), 0.55);
+            if (_trustCopy is not null)
+                _trustCopy.Text = "Then he backed away.";
+        }
+        else if (_mochi is not null && _trustApproachPhase == 2 && _holdProgress >= 72f)
+        {
+            _trustApproachPhase = 3;
+            MoveMochi(new Vector2(132, 220), 0.85);
+            _mochi.Mood = "curious";
+            if (_trustCopy is not null)
+                _trustCopy.Text = "He looked back. Then came closer again.";
+        }
+
+        if (_holdProgress < 100f)
+            return;
+
+        _holdingTrust = false;
+        _bond.SetForStoryBeat(BondLevel.Testing);
+        _analytics.Track(AnalyticsEvents.FirstTrustResponse);
+        _haptics.Affection();
+        AdvanceStory("first_trust");
+        BuildShelterPuzzle();
+    }
+
+    private void MoveMochi(Vector2 target, double duration)
+    {
+        if (_mochi is null) return;
+        var tween = CreateTween();
+        tween.SetTrans(Tween.TransitionType.Cubic);
+        tween.SetEase(Tween.EaseType.InOut);
+        tween.TweenProperty(_mochi, "position", target, duration);
     }
 
     private void ClearScreen(Color background)
     {
+        _homeActive = false;
+        _homeRoomRoot = null;
+
         foreach (var child in GetChildren())
         {
             RemoveChild(child);
@@ -544,6 +599,7 @@ public partial class WhiskerfolkBootstrap : Control
         ClearScreen(Night);
         _holdProgress = 8;
         _holdingTrust = false;
+        _trustApproachPhase = 0;
 
         var layer = SafeLayer(28, 34);
         var column = new VBoxContainer
@@ -704,20 +760,11 @@ public partial class WhiskerfolkBootstrap : Control
         ClearScreen(new Color("#E9D8C0"));
         _bond.SetForStoryBeat(BondLevel.NewHome);
 
-        if (!returningHome)
-        {
-            _analytics.Track(AnalyticsEvents.BoxMomentStarted);
+        if (!returningHome && _rescue.Current.Id == "ride_home")
             AdvanceStory("ride_home");
-            AdvanceStory("box_moment");
-            _save.RescuedCats.Add("mochi");
-            _save.Memories.Add(MochiMemories.FirstNight.Id);
-            _save.CatTrust["mochi"] = _bond.Trust;
-            _saveService.Save(_save);
-            _analytics.Track(AnalyticsEvents.BoxMomentCompleted);
-            _analytics.Track(AnalyticsEvents.HomeFirstEntry);
-            _analytics.Track(AnalyticsEvents.FirstMemoryCreated);
-            _haptics.Affection();
-        }
+
+        if (!returningHome)
+            _analytics.Track(AnalyticsEvents.BoxMomentStarted);
         else
         {
             // Repair older/partially written saves without replaying first-time analytics.
@@ -735,10 +782,22 @@ public partial class WhiskerfolkBootstrap : Control
         layer.AddChild(column);
 
         column.AddChild(Label("HOME", 12, Moss, true));
-        column.AddChild(Label(returningHome ? "Mochi is\nhome." : "Mochi lives\nhere now.", 46, Ink, true));
-        column.AddChild(Label(returningHome
-            ? "He has already started choosing his favorite places."
-            : "No reward chest. No score screen. He picked the warm corner.", 16, SoftInk));
+        var homeTitle = Label(
+            returningHome ? "Mochi is\nhome." : "Give him\na moment.",
+            46,
+            Ink,
+            true
+        );
+        column.AddChild(homeTitle);
+
+        var homeCopy = Label(
+            returningHome
+                ? "He has already started choosing his favorite places."
+                : "New room. New sounds. Let him decide when to come out.",
+            16,
+            SoftInk
+        );
+        column.AddChild(homeCopy);
 
         var room = new PanelContainer
         {
@@ -750,6 +809,7 @@ public partial class WhiskerfolkBootstrap : Control
 
         var roomRoot = new Control();
         room.AddChild(roomRoot);
+        _homeRoomRoot = roomRoot;
 
         var sofa = new PanelContainer
         {
@@ -767,24 +827,42 @@ public partial class WhiskerfolkBootstrap : Control
         homeBox.AddThemeStyleboxOverride("panel", Box(new Color("#9B724B"), 10));
         roomRoot.AddChild(homeBox);
 
+        PanelContainer? carrier = null;
+        if (!returningHome)
+        {
+            carrier = new PanelContainer
+            {
+                Position = new Vector2(300, 285),
+                Size = new Vector2(165, 130)
+            };
+            carrier.AddThemeStyleboxOverride("panel", Box(new Color("#C8B898"), 20));
+            roomRoot.AddChild(carrier);
+
+            var bars = Label("│ │ │ │", 24, new Color("#565B54"), true);
+            bars.HorizontalAlignment = HorizontalAlignment.Center;
+            bars.VerticalAlignment = VerticalAlignment.Center;
+            carrier.AddChild(bars);
+        }
+
         _mochi = new MochiActor
         {
-            Position = returningHome ? new Vector2(170, 300) : new Vector2(246, 285),
+            Position = returningHome ? new Vector2(170, 300) : new Vector2(265, 300),
             Size = new Vector2(220, 220),
             Trust = 64,
-            Mood = "home",
+            Mood = returningHome ? "home" : "curious",
             Modulate = returningHome ? Colors.White : new Color(1,1,1,0)
         };
         roomRoot.AddChild(_mochi);
 
-        if (!returningHome)
+        _homeObjects.Clear();
+        _homeObjects.Add(HomeCatalog.CardboardBox);
+        _homeCatState = new CatState { CatId = "mochi" };
+        _homeCatState.Bond.AddTrust(_bond.Trust);
+
+        if (_save.OwnedHomeObjects.Contains(HomeCatalog.FoldedBlanket.Id))
         {
-            var reveal = CreateTween();
-            reveal.TweenInterval(0.8);
-            reveal.TweenProperty(_mochi, "modulate:a", 1.0f, 0.8);
-            reveal.TweenProperty(_mochi, "position", new Vector2(170, 300), 1.4)
-                .SetTrans(Tween.TransitionType.Cubic)
-                .SetEase(Tween.EaseType.Out);
+            AddBlanketVisual(roomRoot);
+            _homeObjects.Add(HomeCatalog.FoldedBlanket);
         }
 
         var actions = new HBoxContainer();
@@ -809,28 +887,175 @@ public partial class WhiskerfolkBootstrap : Control
         );
         actions.AddChild(memory);
 
-        var blanket = Button("Place his blanket");
+        var blanket = Button(
+            _save.OwnedHomeObjects.Contains(HomeCatalog.FoldedBlanket.Id)
+                ? "Blanket placed"
+                : "Place his blanket"
+        );
+        blanket.Disabled = _save.OwnedHomeObjects.Contains(HomeCatalog.FoldedBlanket.Id);
         blanket.Pressed += () =>
         {
+            if (_homeRoomRoot is null) return;
+
             blanket.Disabled = true;
             blanket.Text = "Blanket placed";
-            var cloth = new PanelContainer
-            {
-                Position = new Vector2(46, 410),
-                Size = new Vector2(170, 70)
-            };
-            cloth.AddThemeStyleboxOverride("panel", Box(new Color("#D8B99A"), 28));
-            roomRoot.AddChild(cloth);
+            AddBlanketVisual(_homeRoomRoot);
+
+            if (!_homeObjects.Contains(HomeCatalog.FoldedBlanket))
+                _homeObjects.Add(HomeCatalog.FoldedBlanket);
+
+            _save.OwnedHomeObjects.Add(HomeCatalog.FoldedBlanket.Id);
+            _saveService.Save(_save);
+            _analytics.Track(AnalyticsEvents.FirstObjectInteraction,
+                new Dictionary<string, object?> { ["object"] = HomeCatalog.FoldedBlanket.Id });
+            _haptics.Affection();
 
             if (_mochi is not null)
             {
-                var tween = CreateTween();
-                tween.TweenProperty(_mochi, "position", new Vector2(38, 335), 1.4)
-                    .SetTrans(Tween.TransitionType.Cubic)
-                    .SetEase(Tween.EaseType.InOut);
+                _mochi.Mood = "curious";
+                MoveMochi(new Vector2(38, 335), 1.4);
             }
         };
         column.AddChild(blanket);
+
+        if (returningHome)
+        {
+            StartHomeLife();
+        }
+        else
+        {
+            PlayBoxMoment(carrier!, homeTitle, homeCopy);
+        }
+    }
+
+    private void PlayBoxMoment(PanelContainer carrier, Label homeTitle, Label homeCopy)
+    {
+        if (_mochi is null) return;
+
+        // Peek → retreat → second look → choose the room → settle near the familiar box.
+        var sequence = CreateTween();
+        sequence.SetTrans(Tween.TransitionType.Cubic);
+        sequence.SetEase(Tween.EaseType.InOut);
+        sequence.TweenInterval(0.9);
+        sequence.TweenProperty(_mochi, "modulate:a", 1.0f, 0.45);
+        sequence.TweenProperty(_mochi, "position", new Vector2(235, 300), 0.7);
+        sequence.TweenInterval(0.45);
+        sequence.TweenProperty(_mochi, "position", new Vector2(262, 300), 0.4);
+        sequence.TweenInterval(0.5);
+        sequence.TweenProperty(_mochi, "position", new Vector2(220, 305), 0.75);
+        sequence.TweenProperty(_mochi, "position", new Vector2(238, 330), 1.05);
+        sequence.Parallel().TweenProperty(carrier, "modulate:a", 0.35f, 0.9);
+        sequence.Finished += () => CompleteBoxMoment(homeTitle, homeCopy);
+    }
+
+    private void CompleteBoxMoment(Label homeTitle, Label homeCopy)
+    {
+        if (_rescue.Current.Id == "box_moment")
+            AdvanceStory("box_moment");
+
+        _save.RescuedCats.Add("mochi");
+        _save.Memories.Add(MochiMemories.FirstNight.Id);
+        _save.CatTrust["mochi"] = _bond.Trust;
+        _saveService.Save(_save);
+
+        _analytics.Track(AnalyticsEvents.BoxMomentCompleted);
+        _analytics.Track(AnalyticsEvents.HomeFirstEntry);
+        _analytics.Track(AnalyticsEvents.FirstMemoryCreated);
+        _haptics.Affection();
+
+        homeTitle.Text = "Mochi lives\nhere now.";
+        homeCopy.Text = "No reward chest. No score screen. He chose the warm corner.";
+        if (_mochi is not null)
+            _mochi.Mood = "home";
+
+        StartHomeLife();
+    }
+
+    private void AddBlanketVisual(Control roomRoot)
+    {
+        var cloth = new PanelContainer
+        {
+            Position = new Vector2(46, 410),
+            Size = new Vector2(170, 70),
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        cloth.AddThemeStyleboxOverride("panel", Box(new Color("#D8B99A"), 28));
+        roomRoot.AddChild(cloth);
+    }
+
+    private void StartHomeLife()
+    {
+        if (_homeCatState is null || _mochi is null)
+            return;
+
+        _homeActive = true;
+        _homeBehaviorTimer = 3.5f;
+    }
+
+    private void RunHomeBehavior()
+    {
+        if (!_homeActive || _mochi is null || _homeCatState is null)
+            return;
+
+        var behavior = _homeScheduler.SelectHomeBehavior(
+            CatCatalog.Mochi,
+            _homeCatState,
+            _homeObjects
+        );
+
+        _homeCatState.CurrentBehavior = behavior;
+        _homeCatState.SeenBehaviors.Add(behavior);
+
+        Vector2? target = null;
+        var mood = "home";
+
+        if (behavior.StartsWith($"{HomeCatalog.CardboardBox.Id}:"))
+        {
+            _homeCatState.CurrentObjectId = HomeCatalog.CardboardBox.Id;
+            if (behavior.EndsWith(":inside"))
+            {
+                target = new Vector2(244, 338);
+                mood = "hiding";
+            }
+            else if (behavior.EndsWith(":peek"))
+            {
+                target = new Vector2(232, 323);
+                mood = "curious";
+            }
+            else
+            {
+                target = new Vector2(255, 286);
+            }
+        }
+        else if (behavior.StartsWith($"{HomeCatalog.FoldedBlanket.Id}:"))
+        {
+            _homeCatState.CurrentObjectId = HomeCatalog.FoldedBlanket.Id;
+            target = new Vector2(36, 336);
+            mood = "home";
+        }
+        else if (behavior == "watch_player")
+        {
+            _homeCatState.CurrentObjectId = null;
+            target = new Vector2(128, 310);
+            mood = "curious";
+        }
+        else if (behavior == "groom")
+        {
+            _homeCatState.CurrentObjectId = null;
+            target = new Vector2(155, 315);
+            mood = "home";
+        }
+        else
+        {
+            _homeCatState.CurrentObjectId = null;
+        }
+
+        _mochi.Mood = mood;
+
+        if (target.HasValue)
+            MoveMochi(target.Value, 1.2);
+
+        _homeBehaviorTimer = 5.0f + (float)_homeRandom.NextDouble() * 4.5f;
     }
 
     private void ShowSheet(string kicker, string title, string copy)
