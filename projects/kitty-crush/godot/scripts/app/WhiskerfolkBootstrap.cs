@@ -99,7 +99,7 @@ public partial class WhiskerfolkBootstrap : Control
 
     private bool AdvanceStory(string completedBeatId)
     {
-        if (!AdvanceStory(completedBeatId))
+        if (!_rescue.TryAdvance(completedBeatId))
             return false;
 
         _save.CurrentRescueBeat = _rescue.BeatIndex;
