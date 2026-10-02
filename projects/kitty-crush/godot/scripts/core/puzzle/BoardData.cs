@@ -1,6 +1,6 @@
 using Godot;
 
-namespace Match3Demo;
+namespace Whiskerfolk.Puzzle;
 
 public partial class BoardData
 {
