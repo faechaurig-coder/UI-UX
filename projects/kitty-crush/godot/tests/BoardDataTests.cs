@@ -1,6 +1,8 @@
 using Godot;
 using Xunit;
 
+using Whiskerfolk.Puzzle;
+
 namespace Whiskerfolk.Tests;
 
 public class BoardDataTests
