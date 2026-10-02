@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 230" role="img" aria-labelledby="t">
+<title id="t">Whiskerfolk wordmark concept</title>
+<rect width="900" height="230" rx="48" fill="#FFF9EF"/>
+<g fill="none" stroke="#27312E" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M66 73 94 162l36-72 37 72 29-89"/>
+  <path d="M183 84c16-28 49-24 54 2"/>
+  <path d="M174 114c26 15 51 18 80 3"/>
+</g>
+<text x="278" y="143" fill="#27312E" font-family="Nunito, Avenir Next, system-ui, sans-serif" font-size="82" font-weight="750" letter-spacing="-3">WHISKERFOLK</text>
+<path d="M733 168c35 18 70 19 104-1" fill="none" stroke="#C58A5D" stroke-width="6" stroke-linecap="round"/>
+<path d="m823 166 27-14-10 28" fill="#C58A5D"/>
+</svg>

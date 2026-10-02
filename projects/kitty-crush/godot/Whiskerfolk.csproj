@@ -1,0 +1,27 @@
+<Project Sdk="Godot.NET.Sdk/4.6.3">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Whiskerfolk</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RollForward>LatestMajor</RollForward>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+    <Compile Remove="scripts/core/puzzle/**/*.cs" />
+    <Compile Remove="scripts/puzzle/**/*.cs" />
+    <Compile Remove="scripts/cats/**/*.cs" />
+    <Compile Remove="scripts/rescue/**/*.cs" />
+    <Compile Remove="scripts/home/**/*.cs" />
+    <Compile Remove="scripts/memories/**/*.cs" />
+    <Compile Remove="scripts/economy/**/*.cs" />
+    <Compile Remove="scripts/analytics/IAnalyticsService.cs" />
+    <Compile Remove="scripts/save/SaveGame.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="core/Whiskerfolk.Core.csproj" />
+  </ItemGroup>
+</Project>

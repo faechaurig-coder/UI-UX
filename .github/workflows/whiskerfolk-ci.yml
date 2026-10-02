@@ -1,0 +1,71 @@
+name: Whiskerfolk CI
+
+on:
+  push:
+    branches:
+      - kitty-crush-preproduction
+    paths:
+      - 'projects/kitty-crush/**'
+      - '.github/workflows/whiskerfolk-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'projects/kitty-crush/**'
+      - '.github/workflows/whiskerfolk-ci.yml'
+
+concurrency:
+  group: whiskerfolk-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Static Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate web prototype syntax
+        run: node --check projects/kitty-crush/prototype-web/app.js
+
+      - name: Validate Godot main scene
+        run: grep -F 'run/main_scene="res://scenes/Main.tscn"' projects/kitty-crush/godot/project.godot
+
+      - name: Validate Android haptics permission
+        run: grep -F 'permissions/vibrate=true' projects/kitty-crush/godot/export_presets.cfg
+
+      - name: Validate third-party license retention
+        run: test -s projects/kitty-crush/godot/THIRD_PARTY_MATCH3_PETS_LICENSE.txt
+
+      - name: Guard runtime from test packages
+        run: |
+          if grep -qi 'xunit\|Microsoft.NET.Test.Sdk\|coverlet' projects/kitty-crush/godot/Whiskerfolk.csproj; then
+            echo "Test-only package leaked into runtime project."
+            exit 1
+          fi
+
+  test:
+    name: Build + Core Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/kitty-crush/godot
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore tests
+        run: dotnet restore tests/Whiskerfolk.Tests.csproj
+
+      - name: Build Godot runtime
+        run: dotnet build Whiskerfolk.csproj --configuration Release
+
+      - name: Test engine-agnostic core
+        run: dotnet test tests/Whiskerfolk.Tests.csproj --configuration Release --logger "console;verbosity=normal"
