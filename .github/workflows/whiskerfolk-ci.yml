@@ -1,0 +1,41 @@
+name: Whiskerfolk CI
+
+on:
+  push:
+    branches:
+      - kitty-crush-preproduction
+    paths:
+      - 'projects/kitty-crush/godot/**'
+      - '.github/workflows/whiskerfolk-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'projects/kitty-crush/godot/**'
+      - '.github/workflows/whiskerfolk-ci.yml'
+
+jobs:
+  test:
+    name: Build + Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/kitty-crush/godot
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore Whiskerfolk.csproj
+
+      - name: Build
+        run: dotnet build Whiskerfolk.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Whiskerfolk.csproj --configuration Release --no-build --logger "console;verbosity=normal"
