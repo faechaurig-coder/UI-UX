@@ -32,10 +32,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        run: dotnet restore Whiskerfolk.csproj
+        run: dotnet restore tests/Whiskerfolk.Tests.csproj
 
       - name: Build
-        run: dotnet build Whiskerfolk.csproj --configuration Release --no-restore
+        run: dotnet build Whiskerfolk.csproj --configuration Release
 
       - name: Test
-        run: dotnet test Whiskerfolk.csproj --configuration Release --no-build --logger "console;verbosity=normal"
+        run: dotnet test tests/Whiskerfolk.Tests.csproj --configuration Release --logger "console;verbosity=normal"
