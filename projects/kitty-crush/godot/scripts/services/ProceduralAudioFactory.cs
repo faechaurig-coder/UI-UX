@@ -71,7 +71,7 @@ public static class ProceduralAudioFactory
             var progress = (float)i / frames;
 
             // Small upward inflection with a quiet second formant.
-            var frequency = 315f + progress * 135f + MathF.Sin(progress * MathF.Pi) * 45f;
+            var frequency = 315f + progress * 135f + MathF.Sin(progress * MathF.PI) * 45f;
             var phase = MathF.Tau * frequency * t;
             var envelope = MathF.Sin(MathF.PI * Math.Clamp(progress, 0f, 1f));
             var sample =
