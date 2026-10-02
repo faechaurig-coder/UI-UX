@@ -1,71 +1,56 @@
-using Godot;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Whiskerfolk.Puzzle;
 
-public class MatchDetector
+public static class MatchDetector
 {
-    private static readonly Vector2I[] DIRECTIONS = new[]
+    private static readonly GridPos[] Directions =
     {
-        new Vector2I(0, -1), new Vector2I(1, 0), new Vector2I(0, 1), new Vector2I(-1, 0)
+        new(0, -1),
+        new(1, 0),
+        new(0, 1),
+        new(-1, 0)
     };
 
     public static MatchResult DetectAll(BoardData board)
     {
-        var result = new MatchResult();
-        int size = board.Cols * board.Rows;
-        result.MatchedFlags = new byte[size];
-
-        var groups = new List<MatchResult.MatchGroup>();
-        groups.AddRange(DetectHorizontal(board));
-        groups.AddRange(DetectVertical(board));
-
-        foreach (var g in groups)
+        var result = new MatchResult
         {
-            foreach (var pos in g.Positions)
-            {
-                int idx = board.GetIndex(pos.Y, pos.X);
-                result.MatchedFlags[idx] = 1;
-            }
+            MatchedFlags = new byte[board.Cols * board.Rows]
+        };
+
+        MarkHorizontal(board, result.MatchedFlags);
+        MarkVertical(board, result.MatchedFlags);
+
+        var visited = new byte[result.MatchedFlags.Length];
+
+        for (var i = 0; i < result.MatchedFlags.Length; i++)
+        {
+            if (result.MatchedFlags[i] == 0 || visited[i] != 0)
+                continue;
+
+            var region = FloodFill(board, result.MatchedFlags, visited, i);
+            if (region.Count < 3) continue;
+
+            var group = Classify(region, board);
+            result.Groups.Add(group);
+
+            var special = DetermineSpecial(group);
+            if (special.SpecialType != (int)SpecialType.None)
+                result.SpecialSpawns.Add(special);
         }
 
-        var visited = new byte[size];
-        var finalGroups = new List<MatchResult.MatchGroup>();
-
-        for (int i = 0; i < size; i++)
-        {
-            if (result.MatchedFlags[i] == 1 && visited[i] == 0)
-            {
-                var region = FloodFill(result.MatchedFlags, visited, i, board);
-                if (region.Count >= 3)
-                {
-                    var group = ClassifyShape(region, board);
-                    finalGroups.Add(group);
-                }
-            }
-        }
-
-        result.Groups = finalGroups;
-        result.TotalMatched = CountMatched(result.MatchedFlags);
-
-        foreach (var group in finalGroups)
-        {
-            var spawn = DetermineSpecial(group);
-            if (spawn.SpecialType != -1)
-            {
-                result.SpecialSpawns.Add(spawn);
-            }
-        }
-
+        result.TotalMatched = result.MatchedFlags.Count(x => x != 0);
         return result;
     }
 
-    private static List<MatchResult.MatchGroup> DetectHorizontal(BoardData board)
+    private static void MarkHorizontal(BoardData board, byte[] flags)
     {
-        var groups = new List<MatchResult.MatchGroup>();
-        for (int row = 0; row < board.Rows; row++)
+        for (var row = 0; row < board.Rows; row++)
         {
-            int col = 0;
+            var col = 0;
             while (col < board.Cols)
             {
                 var tile = board.GetTile(row, col);
@@ -74,40 +59,28 @@ public class MatchDetector
                     col++;
                     continue;
                 }
-                int runType = tile.CrystalType;
-                int runStart = col;
-                col++;
+
+                var type = tile.CrystalType;
+                var start = col++;
                 while (col < board.Cols)
                 {
-                    var nextTile = board.GetTile(row, col);
-                    if (nextTile.IsEmpty || nextTile.CrystalType != runType)
-                        break;
+                    var next = board.GetTile(row, col);
+                    if (next.IsEmpty || next.CrystalType != type) break;
                     col++;
                 }
-                int runLength = col - runStart;
-                if (runLength >= 3)
-                {
-                    var group = new MatchResult.MatchGroup();
-                    group.Shape = 0;
-                    group.CrystalType = runType;
-                    group.MatchLength = runLength;
-                    for (int c = runStart; c < runStart + runLength; c++)
-                    {
-                        group.Positions.Add(new Vector2I(c, row));
-                    }
-                    groups.Add(group);
-                }
+
+                if (col - start < 3) continue;
+                for (var c = start; c < col; c++)
+                    flags[board.GetIndex(row, c)] = 1;
             }
         }
-        return groups;
     }
 
-    private static List<MatchResult.MatchGroup> DetectVertical(BoardData board)
+    private static void MarkVertical(BoardData board, byte[] flags)
     {
-        var groups = new List<MatchResult.MatchGroup>();
-        for (int col = 0; col < board.Cols; col++)
+        for (var col = 0; col < board.Cols; col++)
         {
-            int row = 0;
+            var row = 0;
             while (row < board.Rows)
             {
                 var tile = board.GetTile(row, col);
@@ -116,235 +89,131 @@ public class MatchDetector
                     row++;
                     continue;
                 }
-                int runType = tile.CrystalType;
-                int runStart = row;
-                row++;
+
+                var type = tile.CrystalType;
+                var start = row++;
                 while (row < board.Rows)
                 {
-                    var nextTile = board.GetTile(row, col);
-                    if (nextTile.IsEmpty || nextTile.CrystalType != runType)
-                        break;
+                    var next = board.GetTile(row, col);
+                    if (next.IsEmpty || next.CrystalType != type) break;
                     row++;
                 }
-                int runLength = row - runStart;
-                if (runLength >= 3)
-                {
-                    var group = new MatchResult.MatchGroup();
-                    group.Shape = 1;
-                    group.CrystalType = runType;
-                    group.MatchLength = runLength;
-                    for (int r = runStart; r < runStart + runLength; r++)
-                    {
-                        group.Positions.Add(new Vector2I(col, r));
-                    }
-                    groups.Add(group);
-                }
+
+                if (row - start < 3) continue;
+                for (var r = start; r < row; r++)
+                    flags[board.GetIndex(r, col)] = 1;
             }
         }
-        return groups;
     }
 
-    private static List<Vector2I> FloodFill(byte[] flags, byte[] visited, int startIdx, BoardData board)
+    private static List<GridPos> FloodFill(
+        BoardData board,
+        byte[] flags,
+        byte[] visited,
+        int startIndex)
     {
-        var region = new List<Vector2I>();
-        var stack = new List<int> { startIdx };
-        visited[startIdx] = 1;
+        var region = new List<GridPos>();
+        var stack = new Stack<int>();
+        stack.Push(startIndex);
+        visited[startIndex] = 1;
 
-        int crystalType = board.Tiles[startIdx].CrystalType;
+        var type = board.Tiles[startIndex].CrystalType;
 
         while (stack.Count > 0)
         {
-            int currentIdx = stack[stack.Count - 1];
-            stack.RemoveAt(stack.Count - 1);
-            var pos = board.RowCol(currentIdx);
+            var index = stack.Pop();
+            var pos = board.RowCol(index);
             region.Add(pos);
 
-            foreach (var dir in DIRECTIONS)
+            foreach (var direction in Directions)
             {
-                int nCol = pos.X + dir.X;
-                int nRow = pos.Y + dir.Y;
-                if (!board.IsInBounds(nRow, nCol))
-                    continue;
-                int nIdx = board.GetIndex(nRow, nCol);
-                if (visited[nIdx] == 1)
-                    continue;
-                if (flags[nIdx] == 0)
-                    continue;
-                if (board.Tiles[nIdx].CrystalType != crystalType)
-                    continue;
-                visited[nIdx] = 1;
-                stack.Add(nIdx);
+                var next = pos + direction;
+                if (!board.IsInBounds(next.Y, next.X)) continue;
+
+                var nextIndex = board.GetIndex(next.Y, next.X);
+                if (visited[nextIndex] != 0 || flags[nextIndex] == 0) continue;
+                if (board.Tiles[nextIndex].CrystalType != type) continue;
+
+                visited[nextIndex] = 1;
+                stack.Push(nextIndex);
             }
         }
 
         return region;
     }
 
-    private static MatchResult.MatchGroup ClassifyShape(List<Vector2I> region, BoardData board)
+    private static MatchResult.MatchGroup Classify(List<GridPos> region, BoardData board)
     {
-        var group = new MatchResult.MatchGroup();
-        group.Positions = region;
-
-        if (region.Count < 3)
-            return group;
-
-        var firstPos = region[0];
-        group.CrystalType = board.GetTile(firstPos.Y, firstPos.X).CrystalType;
-
-        int minCol = int.MaxValue;
-        int maxCol = -1;
-        int minRow = int.MaxValue;
-        int maxRow = -1;
-
-        var rowCounts = new Dictionary<int, int>();
-        var colCounts = new Dictionary<int, int>();
-
-        foreach (var pos in region)
+        var group = new MatchResult.MatchGroup
         {
-            minCol = Mathf.Min(minCol, pos.X);
-            maxCol = Mathf.Max(maxCol, pos.X);
-            minRow = Mathf.Min(minRow, pos.Y);
-            maxRow = Mathf.Max(maxRow, pos.Y);
-            rowCounts[pos.Y] = rowCounts.GetValueOrDefault(pos.Y, 0) + 1;
-            colCounts[pos.X] = colCounts.GetValueOrDefault(pos.X, 0) + 1;
-        }
+            Positions = region,
+            CrystalType = board.GetTile(region[0].Y, region[0].X).CrystalType
+        };
 
-        int colSpan = maxCol - minCol + 1;
-        int rowSpan = maxRow - minRow + 1;
-        int numRowsUsed = rowCounts.Keys.Count;
-        int numColsUsed = colCounts.Keys.Count;
+        var rowGroups = region.GroupBy(p => p.Y).ToDictionary(g => g.Key, g => g.Count());
+        var colGroups = region.GroupBy(p => p.X).ToDictionary(g => g.Key, g => g.Count());
 
-        int maxRowCount = 0;
-        int maxRowKey = -1;
-        foreach (var key in rowCounts.Keys)
+        if (rowGroups.Count == 1)
         {
-            if (rowCounts[key] > maxRowCount)
-            {
-                maxRowCount = rowCounts[key];
-                maxRowKey = key;
-            }
-        }
-
-        int maxColCount = 0;
-        int maxColKey = -1;
-        foreach (var key in colCounts.Keys)
-        {
-            if (colCounts[key] > maxColCount)
-            {
-                maxColCount = colCounts[key];
-                maxColKey = key;
-            }
-        }
-
-        int rowsWith3 = 0;
-        foreach (var key in rowCounts.Keys)
-        {
-            if (rowCounts[key] >= 3)
-                rowsWith3++;
-        }
-
-        int colsWith3 = 0;
-        foreach (var key in colCounts.Keys)
-        {
-            if (colCounts[key] >= 3)
-                colsWith3++;
-        }
-
-        bool isHLine = rowSpan == 1 && colSpan >= 3;
-        bool isVLine = colSpan == 1 && rowSpan >= 3;
-
-        if (isHLine)
-        {
-            group.Shape = 0;
-            group.MatchLength = colSpan;
-            group.Pivot = new Vector2I(minCol + colSpan / 2, minRow);
-        }
-        else if (isVLine)
-        {
-            group.Shape = 1;
-            group.MatchLength = rowSpan;
-            group.Pivot = new Vector2I(minCol, minRow + rowSpan / 2);
-        }
-        else if (rowsWith3 >= 2 && colsWith3 >= 2)
-        {
-            group.Shape = 4;
-            group.Pivot = new Vector2I(maxColKey, maxRowKey);
-        }
-        else if (rowsWith3 >= 2)
-        {
-            group.Shape = 2;
-            group.Pivot = new Vector2I(maxColKey, maxRowKey);
-        }
-        else if (colsWith3 >= 2)
-        {
-            group.Shape = 2;
-            group.Pivot = new Vector2I(maxColKey, maxRowKey);
-        }
-        else if (numRowsUsed >= 2 && numColsUsed >= 2)
-        {
-            if (maxRowCount >= 3 && maxColCount >= 3)
-            {
-                group.Shape = 3;
-                group.Pivot = new Vector2I(maxColKey, maxRowKey);
-            }
-            else
-            {
-                group.Shape = 2;
-                group.Pivot = new Vector2I(maxColKey, maxRowKey);
-            }
-        }
-        else
-        {
-            group.Shape = 0;
+            group.Shape = (int)MatchShape.Horizontal;
             group.MatchLength = region.Count;
+            group.Pivot = region.OrderBy(p => p.X).ElementAt(region.Count / 2);
+            return group;
         }
 
+        if (colGroups.Count == 1)
+        {
+            group.Shape = (int)MatchShape.Vertical;
+            group.MatchLength = region.Count;
+            group.Pivot = region.OrderBy(p => p.Y).ElementAt(region.Count / 2);
+            return group;
+        }
+
+        var pivot = region.FirstOrDefault(p =>
+            rowGroups.TryGetValue(p.Y, out var rowCount) && rowCount >= 3 &&
+            colGroups.TryGetValue(p.X, out var colCount) && colCount >= 3);
+
+        group.Pivot = pivot == default && !region.Contains(default) ? region[0] : pivot;
+
+        var set = region.ToHashSet();
+        var left = set.Contains(group.Pivot + new GridPos(-1, 0));
+        var right = set.Contains(group.Pivot + new GridPos(1, 0));
+        var up = set.Contains(group.Pivot + new GridPos(0, -1));
+        var down = set.Contains(group.Pivot + new GridPos(0, 1));
+        var directions = new[] { left, right, up, down }.Count(x => x);
+
+        group.Shape = directions switch
+        {
+            4 => (int)MatchShape.Cross,
+            3 => (int)MatchShape.TShape,
+            _ => (int)MatchShape.LShape
+        };
+        group.MatchLength = region.Count;
         return group;
     }
 
     private static MatchResult.SpecialSpawn DetermineSpecial(MatchResult.MatchGroup group)
     {
-        var spawn = new MatchResult.SpecialSpawn();
-        spawn.Position = group.Pivot;
-        spawn.CrystalType = group.CrystalType;
-
-        int length = group.MatchLength;
-
-        switch (group.Shape)
+        var spawn = new MatchResult.SpecialSpawn
         {
-            case 0:
-            case 1:
-                if (length >= 5)
-                    spawn.SpecialType = 1;
-                else if (length >= 4)
-                    spawn.SpecialType = 0;
-                else
-                    spawn.SpecialType = -1;
-                break;
-            case 2:
-            case 3:
-            case 4:
-                if (group.Positions.Count >= 5)
-                    spawn.SpecialType = 2;
-                else
-                    spawn.SpecialType = -1;
-                break;
-            default:
-                spawn.SpecialType = -1;
-                break;
+            Position = group.Pivot,
+            CrystalType = group.CrystalType,
+            SpecialType = (int)SpecialType.None
+        };
+
+        if (group.Shape is (int)MatchShape.Horizontal or (int)MatchShape.Vertical)
+        {
+            if (group.MatchLength >= 5)
+                spawn.SpecialType = (int)SpecialType.Rainbow;
+            else if (group.MatchLength >= 4)
+                spawn.SpecialType = (int)SpecialType.Bomb;
+
+            return spawn;
         }
+
+        if (group.Positions.Count >= 5)
+            spawn.SpecialType = (int)SpecialType.Cross;
 
         return spawn;
-    }
-
-    private static int CountMatched(byte[] flags)
-    {
-        int count = 0;
-        for (int i = 0; i < flags.Length; i++)
-        {
-            if (flags[i] == 1)
-                count++;
-        }
-        return count;
     }
 }
