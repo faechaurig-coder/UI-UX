@@ -259,7 +259,8 @@ public partial class WhiskerfolkBootstrap : Control
             {
                 _rescue.TryAdvance("first_trust");
                 _rescue.TryAdvance("shelter_help");
-                BuildRescue();
+                _rescue.TryAdvance("water_rises");
+                BuildSafePathPuzzle();
             }
         );
     }
@@ -446,6 +447,7 @@ public partial class WhiskerfolkBootstrap : Control
         {
             "food" => 0,
             "blanket" => 1,
+            "flood" => 2,
             _ => -1
         };
 
@@ -542,11 +544,24 @@ public partial class WhiskerfolkBootstrap : Control
         column.AddChild(hold);
     }
 
+    private void BuildSafePathPuzzle()
+    {
+        BuildPuzzle(
+            MochiObjectives.All["safe_path_carrier"],
+            "SAFE PATH",
+            "Clear the water from his way.",
+            14,
+            () =>
+            {
+                _rescue.TryAdvance("safe_path");
+                BuildRescue();
+            }
+        );
+    }
+
     private void BuildRescue()
     {
         ClearScreen(new Color("#20353F"));
-
-        _rescue.TryAdvance("water_rises");
 
         var layer = SafeLayer();
         var column = new VBoxContainer
