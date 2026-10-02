@@ -551,9 +551,9 @@ public partial class WhiskerfolkBootstrap : Control
         var layer = SafeLayer();
         var column = new VBoxContainer
         {
-            SizeFlagsVertical = SizeFlags.ExpandFill,
-            ThemeOverrideConstants = { ["separation"] = 14 }
+            SizeFlagsVertical = SizeFlags.ExpandFill
         };
+        column.AddThemeConstantOverride("separation", 14);
         layer.AddChild(column);
 
         column.AddChild(Label("ONE LAST THING", 12, Sage, true));
@@ -625,9 +625,9 @@ public partial class WhiskerfolkBootstrap : Control
         var layer = SafeLayer();
         var column = new VBoxContainer
         {
-            SizeFlagsVertical = SizeFlags.ExpandFill,
-            ThemeOverrideConstants = { ["separation"] = 12 }
+            SizeFlagsVertical = SizeFlags.ExpandFill
         };
+        column.AddThemeConstantOverride("separation", 12);
         layer.AddChild(column);
 
         column.AddChild(Label("HOME", 12, Moss, true));
