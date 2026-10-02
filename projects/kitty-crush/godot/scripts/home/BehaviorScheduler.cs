@@ -26,12 +26,21 @@ public sealed class BehaviorScheduler
 
         foreach (var obj in objects)
         {
+            var objectBoost = obj.CatAffinityOverrides.TryGetValue(cat.Id, out var affinity)
+                ? affinity
+                : 0f;
+
             foreach (var slot in obj.Slots)
             {
+                // Object identity matters as much as the pose/interaction slot.
+                // Mochi should recognize "box" even when a slot is tagged "hide" or "sleep".
+                var tags = new HashSet<string>(obj.Tags);
+                tags.UnionWith(slot.BehaviorTags);
+
                 options.Add(new BehaviorOption(
                     $"{obj.Id}:{slot.Id}",
-                    slot.BehaviorTags,
-                    0.28f,
+                    tags,
+                    0.28f + objectBoost,
                     obj.Id,
                     state.CurrentObjectId == obj.Id ? 0.25f : 0f
                 ));
