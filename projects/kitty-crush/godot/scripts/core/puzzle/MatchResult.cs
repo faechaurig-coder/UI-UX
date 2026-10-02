@@ -1,51 +1,41 @@
-using Godot;
 using System.Collections.Generic;
 
 namespace Whiskerfolk.Puzzle;
 
-public partial class MatchResult
+public sealed class MatchResult
 {
-    public List<MatchGroup> Groups = new();
-    public byte[] MatchedFlags = new byte[0];
-    public List<SpecialSpawn> SpecialSpawns = new();
-    public int TotalMatched = 0;
+    public List<MatchGroup> Groups { get; set; } = new();
+    public byte[] MatchedFlags { get; set; } = System.Array.Empty<byte>();
+    public List<SpecialSpawn> SpecialSpawns { get; set; } = new();
+    public int TotalMatched { get; set; }
 
-    public bool HasMatches()
-    {
-        return TotalMatched > 0;
-    }
+    public bool HasMatches() => TotalMatched > 0;
 
-    public List<Vector2I> GetAllPositions()
+    public List<GridPos> GetAllPositions()
     {
-        var all = new List<Vector2I>();
+        var all = new List<GridPos>();
         foreach (var group in Groups)
             all.AddRange(group.Positions);
         return all;
     }
 
-    public class MatchGroup
+    public sealed class MatchGroup
     {
-        public int Shape = 0;
-        public List<Vector2I> Positions = new();
-        public Vector2I Pivot = new(-1, -1);
-        public int MatchLength = 0;
-        public int CrystalType = -1;
-
-        public int Size()
-        {
-            return Positions.Count;
-        }
+        public int Shape { get; set; }
+        public List<GridPos> Positions { get; set; } = new();
+        public GridPos Pivot { get; set; } = new(-1, -1);
+        public int MatchLength { get; set; }
+        public int CrystalType { get; set; } = -1;
+        public int Size() => Positions.Count;
     }
 
-    public class SpecialSpawn
+    public sealed class SpecialSpawn
     {
-        public Vector2I Position = new();
-        public int SpecialType = -1;
-        public int CrystalType = -1;
+        public GridPos Position { get; set; }
+        public int SpecialType { get; set; } = -1;
+        public int CrystalType { get; set; } = -1;
 
-        public override string ToString()
-        {
-            return $"SpecialSpawn(type={SpecialType}, pos={Position})";
-        }
+        public override string ToString() =>
+            $"SpecialSpawn(type={SpecialType}, pos={Position})";
     }
 }
