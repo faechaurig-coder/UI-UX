@@ -85,6 +85,9 @@ public partial class WhiskerfolkBootstrap : Control
                 BuildShelterPuzzle();
                 break;
             case 4:
+                AdvanceStory("water_rises");
+                BuildSafePathPuzzle();
+                break;
             case 5:
                 BuildSafePathPuzzle();
                 break;
@@ -696,19 +699,32 @@ public partial class WhiskerfolkBootstrap : Control
 
     private void BuildHome()
     {
+        var returningHome = _save.RescuedCats.Contains("mochi") || _rescue.BeatIndex >= 9;
+
         ClearScreen(new Color("#E9D8C0"));
-        _analytics.Track(AnalyticsEvents.BoxMomentStarted);
         _bond.SetForStoryBeat(BondLevel.NewHome);
-        AdvanceStory("ride_home");
-        AdvanceStory("box_moment");
-        _save.RescuedCats.Add("mochi");
-        _save.Memories.Add(MochiMemories.FirstNight.Id);
-        _save.CatTrust["mochi"] = _bond.Trust;
-        _saveService.Save(_save);
-        _analytics.Track(AnalyticsEvents.BoxMomentCompleted);
-        _analytics.Track(AnalyticsEvents.HomeFirstEntry);
-        _analytics.Track(AnalyticsEvents.FirstMemoryCreated);
-        _haptics.Affection();
+
+        if (!returningHome)
+        {
+            _analytics.Track(AnalyticsEvents.BoxMomentStarted);
+            AdvanceStory("ride_home");
+            AdvanceStory("box_moment");
+            _save.RescuedCats.Add("mochi");
+            _save.Memories.Add(MochiMemories.FirstNight.Id);
+            _save.CatTrust["mochi"] = _bond.Trust;
+            _saveService.Save(_save);
+            _analytics.Track(AnalyticsEvents.BoxMomentCompleted);
+            _analytics.Track(AnalyticsEvents.HomeFirstEntry);
+            _analytics.Track(AnalyticsEvents.FirstMemoryCreated);
+            _haptics.Affection();
+        }
+        else
+        {
+            // Repair older/partially written saves without replaying first-time analytics.
+            _save.RescuedCats.Add("mochi");
+            _save.Memories.Add(MochiMemories.FirstNight.Id);
+            _saveService.Save(_save);
+        }
 
         var layer = SafeLayer();
         var column = new VBoxContainer
@@ -719,8 +735,10 @@ public partial class WhiskerfolkBootstrap : Control
         layer.AddChild(column);
 
         column.AddChild(Label("HOME", 12, Moss, true));
-        column.AddChild(Label("Mochi lives\nhere now.", 46, Ink, true));
-        column.AddChild(Label("No reward chest. No score screen. He picked the warm corner.", 16, SoftInk));
+        column.AddChild(Label(returningHome ? "Mochi is\nhome." : "Mochi lives\nhere now.", 46, Ink, true));
+        column.AddChild(Label(returningHome
+            ? "He has already started choosing his favorite places."
+            : "No reward chest. No score screen. He picked the warm corner.", 16, SoftInk));
 
         var room = new PanelContainer
         {
@@ -751,20 +769,23 @@ public partial class WhiskerfolkBootstrap : Control
 
         _mochi = new MochiActor
         {
-            Position = new Vector2(246, 285),
+            Position = returningHome ? new Vector2(170, 300) : new Vector2(246, 285),
             Size = new Vector2(220, 220),
             Trust = 64,
             Mood = "home",
-            Modulate = new Color(1,1,1,0)
+            Modulate = returningHome ? Colors.White : new Color(1,1,1,0)
         };
         roomRoot.AddChild(_mochi);
 
-        var reveal = CreateTween();
-        reveal.TweenInterval(0.8);
-        reveal.TweenProperty(_mochi, "modulate:a", 1.0f, 0.8);
-        reveal.TweenProperty(_mochi, "position", new Vector2(170, 300), 1.4)
-            .SetTrans(Tween.TransitionType.Cubic)
-            .SetEase(Tween.EaseType.Out);
+        if (!returningHome)
+        {
+            var reveal = CreateTween();
+            reveal.TweenInterval(0.8);
+            reveal.TweenProperty(_mochi, "modulate:a", 1.0f, 0.8);
+            reveal.TweenProperty(_mochi, "position", new Vector2(170, 300), 1.4)
+                .SetTrans(Tween.TransitionType.Cubic)
+                .SetEase(Tween.EaseType.Out);
+        }
 
         var actions = new HBoxContainer();
         actions.AddThemeConstantOverride("separation", 8);
