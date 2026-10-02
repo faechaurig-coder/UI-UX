@@ -1,86 +1,98 @@
-using Godot;
+using System;
+using System.Collections.Generic;
 
 namespace Whiskerfolk.Puzzle;
 
-public partial class BoardData
+public sealed class BoardData
 {
-    public int Cols = 8;
-    public int Rows = 8;
-    public CellData[] Tiles = System.Array.Empty<CellData>();
-    public int NumCrystalTypes = 5;
+    public int Cols { get; }
+    public int Rows { get; }
+    public CellData[] Tiles { get; }
+    public int NumCrystalTypes { get; }
 
-    public BoardData(int pCols = 8, int pRows = 8, int pTypes = 5)
+    public BoardData(int cols = 8, int rows = 8, int types = 5)
     {
-        Cols = pCols;
-        Rows = pRows;
-        NumCrystalTypes = pTypes;
-        int total = Cols * Rows;
-        Tiles = new CellData[total];
-        for (int i = 0; i < total; i++)
-            Tiles[i] = new CellData();
-    }
+        if (cols <= 0) throw new ArgumentOutOfRangeException(nameof(cols));
+        if (rows <= 0) throw new ArgumentOutOfRangeException(nameof(rows));
+        if (types <= 0) throw new ArgumentOutOfRangeException(nameof(types));
 
-    public CellData GetTile(int pRow, int pCol)
-    {
-        return Tiles[pRow * Cols + pCol];
-    }
+        Cols = cols;
+        Rows = rows;
+        NumCrystalTypes = types;
+        Tiles = new CellData[Cols * Rows];
 
-    public void SetTile(int pRow, int pCol, CellData tile)
-    {
-        tile.Row = pRow;
-        tile.Col = pCol;
-        Tiles[pRow * Cols + pCol] = tile;
-    }
-
-    public int GetIndex(int pRow, int pCol)
-    {
-        return pRow * Cols + pCol;
-    }
-
-    public Vector2I RowCol(int pIndex)
-    {
-        return new Vector2I(pIndex % Cols, pIndex / Cols);
-    }
-
-    public bool IsInBounds(int pRow, int pCol)
-    {
-        return pRow >= 0 && pRow < Rows && pCol >= 0 && pCol < Cols;
-    }
-
-    public void Swap(int pRow1, int pCol1, int pRow2, int pCol2)
-    {
-        int idx1 = GetIndex(pRow1, pCol1);
-        int idx2 = GetIndex(pRow2, pCol2);
-        var temp = Tiles[idx1];
-        Tiles[idx1] = Tiles[idx2];
-        Tiles[idx2] = temp;
-        Tiles[idx1].Row = pRow1;
-        Tiles[idx1].Col = pCol1;
-        Tiles[idx2].Row = pRow2;
-        Tiles[idx2].Col = pCol2;
-    }
-
-    public Godot.Collections.Array<Godot.Collections.Dictionary> DuplicateData()
-    {
-        var data = new Godot.Collections.Array<Godot.Collections.Dictionary>();
-        foreach (var tile in Tiles)
+        for (var i = 0; i < Tiles.Length; i++)
         {
-            var dict = new Godot.Collections.Dictionary();
-            dict["type"] = tile.CrystalType;
-            dict["special"] = tile.SpecialType;
-            dict["empty"] = tile.IsEmpty;
-            data.Add(dict);
+            var pos = RowCol(i);
+            Tiles[i] = new CellData { Row = pos.Y, Col = pos.X };
+        }
+    }
+
+    public CellData GetTile(int row, int col) => Tiles[GetIndex(row, col)];
+
+    public void SetTile(int row, int col, CellData tile)
+    {
+        if (tile is null) throw new ArgumentNullException(nameof(tile));
+        tile.Row = row;
+        tile.Col = col;
+        Tiles[GetIndex(row, col)] = tile;
+    }
+
+    public int GetIndex(int row, int col)
+    {
+        if (!IsInBounds(row, col))
+            throw new ArgumentOutOfRangeException($"Cell ({row},{col}) is outside {Rows}x{Cols} board.");
+        return row * Cols + col;
+    }
+
+    public GridPos RowCol(int index)
+    {
+        if (index < 0 || index >= Tiles.Length)
+            throw new ArgumentOutOfRangeException(nameof(index));
+        return new GridPos(index % Cols, index / Cols);
+    }
+
+    public bool IsInBounds(int row, int col) =>
+        row >= 0 && row < Rows && col >= 0 && col < Cols;
+
+    public void Swap(int row1, int col1, int row2, int col2)
+    {
+        var idx1 = GetIndex(row1, col1);
+        var idx2 = GetIndex(row2, col2);
+
+        (Tiles[idx1], Tiles[idx2]) = (Tiles[idx2], Tiles[idx1]);
+
+        Tiles[idx1].Row = row1;
+        Tiles[idx1].Col = col1;
+        Tiles[idx2].Row = row2;
+        Tiles[idx2].Col = col2;
+    }
+
+    public CellSnapshot[] DuplicateData()
+    {
+        var data = new CellSnapshot[Tiles.Length];
+        for (var i = 0; i < Tiles.Length; i++)
+        {
+            var tile = Tiles[i];
+            data[i] = new CellSnapshot(tile.CrystalType, tile.SpecialType, tile.IsEmpty, tile.IsLocked, tile.LockHp);
         }
         return data;
     }
 
-    public void RestoreFromData(Godot.Collections.Array<Godot.Collections.Dictionary> data)
+    public void RestoreFromData(IReadOnlyList<CellSnapshot> data)
     {
-        for (int i = 0; i < Tiles.Length; i++)
+        if (data.Count != Tiles.Length)
+            throw new ArgumentException("Snapshot size does not match board.", nameof(data));
+
+        for (var i = 0; i < Tiles.Length; i++)
         {
-            Tiles[i].CrystalType = (int)data[i]["type"];
-            Tiles[i].SpecialType = (int)data[i]["special"];
-            Tiles[i].IsEmpty = (bool)data[i]["empty"];
+            var snapshot = data[i];
+            var tile = Tiles[i];
+            tile.CrystalType = snapshot.CrystalType;
+            tile.SpecialType = snapshot.SpecialType;
+            tile.IsEmpty = snapshot.IsEmpty;
+            tile.IsLocked = snapshot.IsLocked;
+            tile.LockHp = snapshot.LockHp;
         }
     }
 
@@ -90,43 +102,39 @@ public partial class BoardData
             tile.Clear();
     }
 
-    public int CountType(int pType)
+    public int CountType(int type)
     {
-        int count = 0;
+        var count = 0;
         foreach (var tile in Tiles)
-        {
-            if (!tile.IsEmpty && tile.CrystalType == pType)
+            if (!tile.IsEmpty && tile.CrystalType == type)
                 count++;
-        }
         return count;
     }
 
     public int GetEmptyCount()
     {
-        int count = 0;
+        var count = 0;
         foreach (var tile in Tiles)
-        {
             if (tile.IsEmpty)
                 count++;
-        }
         return count;
     }
 
-    public class CellData
+    public sealed class CellData
     {
-        public int CrystalType = -1;
-        public int SpecialType = -1;
-        public int Row = -1;
-        public int Col = -1;
-        public bool IsEmpty = true;
-        public bool IsLocked = false;
-        public int LockHp = 0;
+        public int CrystalType { get; set; } = -1;
+        public int SpecialType { get; set; } = -1;
+        public int Row { get; set; } = -1;
+        public int Col { get; set; } = -1;
+        public bool IsEmpty { get; set; } = true;
+        public bool IsLocked { get; set; }
+        public int LockHp { get; set; }
 
-        public CellData(int pType = -1, int pSpecial = -1)
+        public CellData(int type = -1, int special = -1)
         {
-            CrystalType = pType;
-            SpecialType = pSpecial;
-            IsEmpty = pType < 0;
+            CrystalType = type;
+            SpecialType = special;
+            IsEmpty = type < 0;
         }
 
         public void Clear()
@@ -136,43 +144,37 @@ public partial class BoardData
             IsEmpty = true;
         }
 
-        public void SetCrystal(int pType, int pSpecial = -1)
+        public void SetCrystal(int type, int special = -1)
         {
-            CrystalType = pType;
-            SpecialType = pSpecial;
+            CrystalType = type;
+            SpecialType = special;
             IsEmpty = false;
         }
 
-        public bool IsNormal()
-        {
-            return !IsEmpty && SpecialType == -1;
-        }
-
-        public bool IsSpecial()
-        {
-            return !IsEmpty && SpecialType != -1;
-        }
+        public bool IsNormal() => !IsEmpty && SpecialType == -1;
+        public bool IsSpecial() => !IsEmpty && SpecialType != -1;
 
         public override string ToString()
         {
-            if (IsEmpty)
-                return "EMPTY";
-            string s = CrystalType.ToString();
-            if (SpecialType == 0)
-                s += "B";
-            else if (SpecialType == 1)
-                s += "R";
-            else if (SpecialType == 2)
-                s += "C";
-            return s;
+            if (IsEmpty) return "EMPTY";
+            var suffix = SpecialType switch { 0 => "B", 1 => "R", 2 => "C", _ => "" };
+            return CrystalType + suffix;
         }
     }
 
-    public class MoveRecord
+    public sealed record CellSnapshot(
+        int CrystalType,
+        int SpecialType,
+        bool IsEmpty,
+        bool IsLocked,
+        int LockHp
+    );
+
+    public sealed class MoveRecord
     {
-        public Vector2I From;
-        public Vector2I To;
-        public Godot.Collections.Array<Godot.Collections.Dictionary> Snapshot;
-        public int ScoreGained = 0;
+        public GridPos From { get; init; }
+        public GridPos To { get; init; }
+        public CellSnapshot[] Snapshot { get; init; } = Array.Empty<CellSnapshot>();
+        public int ScoreGained { get; init; }
     }
 }
