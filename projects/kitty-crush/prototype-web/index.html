@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#273B49" />
+  <title>Whiskerfolk — Mochi Vertical Slice</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main id="app" class="app-shell" aria-live="polite">
+    <section id="scene-intro" class="scene scene--active scene-rain">
+      <div class="rain" aria-hidden="true"></div>
+      <div class="scene-vignette"></div>
+
+      <div class="brand-ghost">WHISKERFOLK</div>
+
+      <div class="story-copy story-copy--top">
+        <p class="eyebrow">A rainy corner. 11:47 PM.</p>
+        <h1>You heard something.</h1>
+      </div>
+
+      <div class="alley-stage">
+        <div class="awning"></div>
+        <div class="puddle puddle-a"></div>
+        <div class="puddle puddle-b"></div>
+
+        <button id="box-hotspot" class="rescue-box" aria-label="Look closer at the box">
+          <span class="box-flap"></span>
+          <span class="box-front"></span>
+          <span class="eyes"><i></i><i></i></span>
+          <span class="box-shadow"></span>
+        </button>
+      </div>
+
+      <div class="bottom-action">
+        <p id="intro-hint" class="soft-copy">There. Again.</p>
+        <button id="look-btn" class="primary-btn">Look closer</button>
+      </div>
+    </section>
+
+    <section id="scene-puzzle" class="scene scene-puzzle">
+      <header class="puzzle-header">
+        <button id="puzzle-back" class="icon-btn" aria-label="Back" disabled>
+          <span>‹</span>
+        </button>
+        <div class="objective-wrap">
+          <span id="objective-kicker" class="eyebrow">FIRST HELP</span>
+          <h2 id="objective-title">Find something he can eat.</h2>
+          <div class="objective-progress">
+            <span id="objective-icon" class="objective-glyph food-glyph"></span>
+            <strong id="objective-count">0 / 6</strong>
+          </div>
+        </div>
+        <button id="sound-toggle" class="icon-btn" aria-label="Toggle sound">
+          <span>♪</span>
+        </button>
+      </header>
+
+      <div class="rescue-peek">
+        <div class="mini-box">
+          <span class="mini-eyes"><i></i><i></i></span>
+        </div>
+        <p id="rescue-peek-copy">He is watching.</p>
+      </div>
+
+      <div id="board" class="board" role="grid" aria-label="Rescue puzzle"></div>
+
+      <div class="puzzle-footer">
+        <div class="moves-pill">
+          <span>Moves</span>
+          <strong id="moves-count">18</strong>
+        </div>
+        <p id="board-tip">Match 3. Build a little trust.</p>
+      </div>
+
+      <div id="level-complete" class="level-complete" hidden>
+        <div class="success-pulse"></div>
+        <p class="eyebrow">YOU HELPED</p>
+        <h2 id="complete-title">He stayed.</h2>
+        <p id="complete-copy">You set the food down and gave him space.</p>
+        <button id="complete-btn" class="primary-btn">Keep watching</button>
+      </div>
+    </section>
+
+    <section id="scene-trust" class="scene scene-trust">
+      <div class="trust-room">
+        <div class="rain-window">
+          <div class="rain rain--window"></div>
+        </div>
+
+        <div class="trust-box"></div>
+
+        <div id="mochi-trust" class="mochi mochi--trust" aria-label="Mochi">
+          <div class="tail"></div>
+          <div class="body"></div>
+          <div class="head">
+            <div class="ear ear--left"></div>
+            <div class="ear ear--right ear--caramel"></div>
+            <div class="mark"></div>
+            <div class="eye eye--left"></div>
+            <div class="eye eye--right"></div>
+            <div class="nose"></div>
+            <div class="whiskers whiskers--left"></div>
+            <div class="whiskers whiskers--right"></div>
+          </div>
+          <div class="paw paw--front"></div>
+        </div>
+
+        <button id="hand-zone" class="hand-zone" aria-label="Hold your hand nearby">
+          <span class="hand-shape">⌁</span>
+          <span>Hold still</span>
+        </button>
+      </div>
+
+      <div class="story-copy story-copy--bottom">
+        <p class="eyebrow">TRUST</p>
+        <h2>Don’t reach for him.</h2>
+        <p id="trust-copy">Stay close. Let him make the next move.</p>
+        <div class="trust-meter" aria-label="Trust">
+          <span id="trust-fill"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="scene-rescue" class="scene scene-rescue">
+      <div class="rescue-sky"></div>
+      <div class="waterline"></div>
+      <div class="carrier">
+        <div class="carrier-door"></div>
+        <div class="carrier-handle"></div>
+      </div>
+
+      <div id="mochi-rescue" class="mochi mochi--rescue">
+        <div class="tail"></div>
+        <div class="body"></div>
+        <div class="head">
+          <div class="ear ear--left"></div>
+          <div class="ear ear--right ear--caramel"></div>
+          <div class="mark"></div>
+          <div class="eye eye--left"></div>
+          <div class="eye eye--right"></div>
+          <div class="nose"></div>
+        </div>
+      </div>
+
+      <div class="story-copy story-copy--top">
+        <p class="eyebrow">ONE LAST THING</p>
+        <h2>Open it. Then wait.</h2>
+        <p>The water is getting closer. He has to choose you.</p>
+      </div>
+
+      <div class="bottom-action">
+        <button id="open-carrier" class="primary-btn">Open the carrier</button>
+      </div>
+    </section>
+
+    <section id="scene-home" class="scene scene-home">
+      <div class="home-light"></div>
+      <div class="window-home">
+        <div class="rain rain--window"></div>
+      </div>
+      <div class="sofa">
+        <div class="sofa-back"></div>
+        <div class="sofa-seat"></div>
+        <div class="sofa-leg l"></div>
+        <div class="sofa-leg r"></div>
+      </div>
+      <div class="rug"></div>
+
+      <div id="home-box" class="home-box">
+        <span class="home-box-flap"></span>
+      </div>
+
+      <div id="mochi-home" class="mochi mochi--home mochi--hidden">
+        <div class="tail"></div>
+        <div class="body"></div>
+        <div class="head">
+          <div class="ear ear--left"></div>
+          <div class="ear ear--right ear--caramel"></div>
+          <div class="mark"></div>
+          <div class="eye eye--left"></div>
+          <div class="eye eye--right"></div>
+          <div class="nose"></div>
+          <div class="whiskers whiskers--left"></div>
+          <div class="whiskers whiskers--right"></div>
+        </div>
+      </div>
+
+      <div id="home-message" class="home-message" hidden>
+        <p class="eyebrow">HOME</p>
+        <h1>Mochi lives here now.</h1>
+        <p>He picked the warmest corner.</p>
+      </div>
+
+      <div id="home-ui" class="home-ui" hidden>
+        <button class="home-pill" data-sheet="catbook">
+          <span class="home-pill-dot"></span>
+          <span>Catbook</span>
+        </button>
+        <button class="home-pill" data-sheet="memory">
+          <span class="home-pill-dot memory"></span>
+          <span>First memory</span>
+        </button>
+        <button id="blanket-btn" class="primary-btn primary-btn--small">Place blanket</button>
+      </div>
+
+      <div id="blanket" class="blanket" hidden></div>
+
+      <div id="sheet" class="sheet" hidden>
+        <div class="sheet-handle"></div>
+        <button id="sheet-close" class="sheet-close" aria-label="Close">×</button>
+        <div id="sheet-content"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
