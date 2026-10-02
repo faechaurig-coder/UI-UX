@@ -6,6 +6,7 @@ config/name="Whiskerfolk"
 config/description="A premium cozy cat rescue game about trust, home and character."
 config/version="0.1.0-vertical-slice"
 run/main_scene="res://scenes/Main.tscn"
+config/quit_on_go_back=false
 
 [display]
 window/size/viewport_width=1080
