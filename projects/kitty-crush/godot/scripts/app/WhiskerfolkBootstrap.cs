@@ -40,6 +40,7 @@ public partial class WhiskerfolkBootstrap : Control
     private BondState _bond = new();
     private readonly IAnalyticsService _analytics = new DebugAnalyticsService();
     private readonly HapticsService _haptics = new();
+    private readonly AudioService _audio = new();
     private readonly SaveService _saveService = new();
     private SaveGame _save = null!;
     private BoardData? _board;
@@ -67,6 +68,13 @@ public partial class WhiskerfolkBootstrap : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+
+        AddChild(_audio);
+        _audio.Register("match", ProceduralAudioFactory.SoftTone(440f, 0.10f, 0.07f, 0.08f));
+        _audio.Register("mrrp", ProceduralAudioFactory.QuestionMrrp());
+        _audio.Register("rescue", ProceduralAudioFactory.RescueChime());
+        _audio.Register("purr", ProceduralAudioFactory.Purr());
+        _audio.Register("cardboard", ProceduralAudioFactory.Cardboard());
 
         _save = _saveService.LoadOrCreate();
         if (_save.CatTrust.TryGetValue("mochi", out var savedTrust))
@@ -195,6 +203,9 @@ public partial class WhiskerfolkBootstrap : Control
 
         foreach (var child in GetChildren())
         {
+            if (child == _audio)
+                continue;
+
             RemoveChild(child);
             child.QueueFree();
         }
@@ -272,6 +283,7 @@ public partial class WhiskerfolkBootstrap : Control
     {
         ClearScreen(Night);
         _analytics.Track(AnalyticsEvents.FirstMochiSeen);
+        GetTree().CreateTimer(0.75).Timeout += () => _audio.PlayOneShot("mrrp", -10f);
 
         var layer = SafeLayer();
         var column = new VBoxContainer
@@ -335,6 +347,7 @@ public partial class WhiskerfolkBootstrap : Control
         var action = Button("Look closer");
         action.Pressed += () =>
         {
+            _audio.PlayOneShot("cardboard", -11f);
             AdvanceStory("discover_box");
             BuildFoodPuzzle();
         };
@@ -576,6 +589,7 @@ public partial class WhiskerfolkBootstrap : Control
         {
             var positions = current.GetAllPositions().Distinct().ToList();
             _haptics.Match();
+            _audio.PlayOneShot("match", -15f);
 
             foreach (var pos in positions)
             {
@@ -734,6 +748,7 @@ public partial class WhiskerfolkBootstrap : Control
             _bond.SetForStoryBeat(BondLevel.TrustingAction);
             _analytics.Track(AnalyticsEvents.RescueCompleted);
             _haptics.Rescue();
+            _audio.PlayOneShot("rescue", -9f);
             AdvanceStory("carrier_choice");
             open.Text = "Wait…";
             open.Disabled = true;
@@ -962,6 +977,7 @@ public partial class WhiskerfolkBootstrap : Control
         _analytics.Track(AnalyticsEvents.HomeFirstEntry);
         _analytics.Track(AnalyticsEvents.FirstMemoryCreated);
         _haptics.Affection();
+        _audio.PlayOneShot("purr", -10f);
 
         homeTitle.Text = "Mochi lives\nhere now.";
         homeCopy.Text = "No reward chest. No score screen. He chose the warm corner.";
