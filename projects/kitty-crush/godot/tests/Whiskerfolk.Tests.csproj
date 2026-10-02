@@ -20,6 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Whiskerfolk.csproj" />
+    <ProjectReference Include="../core/Whiskerfolk.Core.csproj" />
   </ItemGroup>
 </Project>
